@@ -10,6 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- 상세보고서 화면 캡처(JPG 저장)용 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
         body {
@@ -152,6 +154,24 @@
     .wizard-report-pill { display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:800; }
     .wizard-report-actions { display:flex;gap:10px;margin-top:16px; }
     .wizard-report-actions .wizard-btn { flex:1; }
+    /* 애드핏 광고: 크기가 작아 화면 하단에 항상 고정(sticky)해도 콘텐츠를 크게 가리지 않음 */
+    .wizard-ad-slot {
+        position:fixed;
+        left:0; right:0; bottom:0;
+        z-index:999;
+        display:flex;
+        justify-content:center;
+        align-items:center;
+        width:100%;
+        min-height:50px;
+        padding:2px 0;
+        background:#f8fafc;
+        border-top:1px solid #e2e8f0;
+        box-sizing:border-box;
+    }
+    .wizard-ad-slot .kakao_ad_area { margin:0 auto; }
+    /* 하단 고정 광고에 콘텐츠(버튼 등)가 가려지지 않도록 여백 확보 */
+    body { padding-bottom:58px; }
     @media(max-width:760px){ .wizard-report-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
     @media(max-width:640px){
         #wizardApp{padding:12px;}
@@ -535,14 +555,25 @@
           <button class="wizard-report-back" onclick="wizardBackToEdit()">설정 다시 보기</button>
         </div>
         <div class="wizard-summary">
-          지금까지 입력한 조건만으로 계산한 결과입니다. 아래 버튼을 누르면 예시 시나리오나 초기 화면으로 돌아가지 않고, <strong>현재 입력값 기준의 상세 최종보고서</strong>를 이어서 보여드립니다.
+          지금까지 입력한 조건만으로 계산한 결과입니다. <strong>친구에게 공유를 마치면</strong> 예시 시나리오나 초기 화면으로 돌아가지 않고, <strong>현재 입력값 기준의 상세 최종보고서</strong>를 이어서 보여드립니다.
         </div>
         <div id="wizardReportSummary" class="mt-5"></div>
-        <button class="wizard-btn next mt-5 w-full" id="wizardOpenFullReportBtn" onclick="return window.__openRetirementDetailedReport();">상세 최종보고서 보기</button>
+        <button class="wizard-btn next mt-5 w-full" id="wizardShareBtn" onclick="return window.wizardTriggerKakaoShare();">친구에게 이 프로그램 추천하기</button>
+        <p id="wizardShareHint" class="wizard-small text-center mt-2" style="color:#94a3b8;">공유를 마치면 아래 버튼이 활성화됩니다.</p>
+        <button class="wizard-btn next mt-2 w-full" id="wizardOpenFullReportBtn" onclick="return window.wizardOpenFullReport();" disabled style="opacity:.45;cursor:not-allowed;">🔒 상세보고서 보기</button>
       </div>
     </div>
   </div>
 </div>
+
+<!-- 카카오 애드핏 광고: wizardApp 바깥에 있어서 시작 화면/질문 화면/보고서 화면 어디에서도 화면 하단에 항상 고정 표시됨 -->
+<div class="wizard-ad-slot no-print">
+  <ins class="kakao_ad_area" style="display:none;"
+       data-ad-unit="DAN-UffIU05OUlVlZh3d"
+       data-ad-width="320"
+       data-ad-height="50"></ins>
+</div>
+<script type="text/javascript" src="//t1.kakaocdn.net/kas/static/ba.min.js" async></script>
 
 
     <!-- Header Navbar -->
@@ -874,6 +905,14 @@
 <input type="hidden" id="homePurchaseAge" value="60">
 <input type="hidden" id="homePurchasePrice" value="50000">
 <input type="hidden" id="housingLoanEnabled" value="no">
+<input type="hidden" id="housingUpgradeEnabled" value="no">
+<input type="hidden" id="housingUpgradeAge" value="60">
+<input type="hidden" id="housingUpgradePrice" value="80000">
+<input type="hidden" id="housingUpgradeLoanEnabled" value="no">
+<input type="hidden" id="housingUpgradeLoanLTV" value="70">
+<input type="hidden" id="housingUpgradeLoanRate" value="4.0">
+<input type="hidden" id="housingUpgradeLoanTerm" value="30">
+<input type="hidden" id="housingUpgradeLoanMonthlySavings" value="150">
 
                 <div id="tab-realestate" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
                     <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
@@ -1061,6 +1100,21 @@
                                     <span class="absolute right-3 top-2 text-xs text-slate-400">%</span>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="p-3 rounded-xl border border-rose-200 bg-rose-50/70 space-y-2">
+                          <label class="flex items-center gap-2 text-xs font-bold text-rose-900 cursor-pointer">
+                            <input type="checkbox" id="govPensionReform" onchange="document.getElementById('govPensionReformInputs').classList.toggle('hidden',!this.checked);calculateAll()" class="accent-rose-600 w-4 h-4">
+                            공무원연금 개악(수급액 축소) 시나리오 가정
+                          </label>
+                          <div class="text-[10px] text-rose-700 leading-relaxed">켜면 향후 연금 개혁으로 공무원연금 수급액이 줄어드는 상황을 가정해 최종 보고서를 계산합니다. 축소율은 직접 조정할 수 있습니다.</div>
+                          <div id="govPensionReformInputs" class="hidden">
+                            <label class="block text-[10px] font-semibold text-rose-700 mb-1">연금 수급액 축소율</label>
+                            <div class="relative">
+                              <input type="number" id="govPensionReformCutPct" value="20" step="1" min="0" max="50" oninput="calculateAll()" class="w-full px-3 py-2 bg-white border border-rose-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-rose-500">
+                              <span class="absolute right-3 top-2 text-xs text-slate-400">%</span>
+                            </div>
+                          </div>
                         </div>
 
                         <div class="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100 space-y-3">
@@ -1327,9 +1381,10 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
             const ids = [
                 'currentAge', 'retireAge', 'lifeExpectancy', 'currentAssets', 'monthlySavings',
                 'targetMonthlyExpense', 'inflationRate', 'realEstateValue', 'realEstateRegion', 'realEstateDistrict',
-                'realEstateGrowthRate', 'realEstateRetireAction', 'rentalIncome', 'housingStatus', 'homePurchaseAge', 'homePurchasePrice', 'housingLoanEnabled', 'housingLoanLTV', 'housingLoanRate', 'housingLoanTerm', 'housingLoanMonthlySavings', 'npsIncome',
+                'realEstateGrowthRate', 'realEstateRetireAction', 'rentalIncome', 'housingStatus', 'homePurchaseAge', 'homePurchasePrice', 'housingLoanEnabled', 'housingLoanLTV', 'housingLoanRate', 'housingLoanTerm', 'housingLoanMonthlySavings',
+                'housingUpgradeEnabled', 'housingUpgradeAge', 'housingUpgradePrice', 'housingUpgradeLoanEnabled', 'housingUpgradeLoanLTV', 'housingUpgradeLoanRate', 'housingUpgradeLoanTerm', 'housingUpgradeLoanMonthlySavings', 'npsIncome',
                 'npsYears', 'npsStartAge', 'govJobGroup', 'govRank', 'govStep',
-                'govYears', 'govWageGrowth', 'govTaxableAllowance', 'govAnnualBonus', 'govEightAvg', 'govAvgFactor', 'govAValue', 'dividendMode', 'dividendYield', 'dividendAllocation', 'dividendReinvest', 'feeApply', 'customReturn', 'customDividendYield', 'pensionTaxRate', 'dividendTaxRate', 'realEstateTaxRate'
+                'govYears', 'govWageGrowth', 'govTaxableAllowance', 'govAnnualBonus', 'govEightAvg', 'govAvgFactor', 'govAValue', 'govPensionReform', 'govPensionReformCutPct', 'dividendMode', 'dividendYield', 'dividendAllocation', 'dividendReinvest', 'feeApply', 'customReturn', 'customDividendYield', 'pensionTaxRate', 'dividendTaxRate', 'realEstateTaxRate'
             ];
             ids.forEach(id => {
                 const el = document.getElementById(id);
@@ -1599,6 +1654,13 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
                 const table=[[0.3,3],[0.4,2.1667],[0.5,1.75],[0.6,1.5],[0.7,1.3333],[0.8,1.2143],[0.9,1.125],[1.0,1.0556],[1.1,1.0],[1.2,0.9545],[1.3,0.9167],[1.4,0.8846],[1.5,0.8571],[1.6,0.8333],[Infinity,0.8125]];
                 const ratio=A?B/A:1; let f=0.8125; for(const [limit,v] of table){if(ratio<limit){f=v;break}}
                 monthlyPension=B*(rate-0.01)*N+(B*f)*0.01*Math.min(N,30);
+
+                // 공무원연금 개악(수급액 축소) 시나리오: 체크박스를 켜면 설정한 축소율만큼 수급액을 줄여서 계산합니다.
+                const reformOn=document.getElementById('govPensionReform')?.checked;
+                if(reformOn){
+                    const cutPct=Math.min(50,Math.max(0,parseFloat(document.getElementById('govPensionReformCutPct')?.value)||0))/100;
+                    monthlyPension*=(1-cutPct);
+                }
             }
 
             return Math.max(0, monthlyPension);
@@ -1613,20 +1675,32 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
             const monthlySavings=Math.max(0,parseFloat(inputs.monthlySavings.value)||0);
             const loanSavingsEl=document.getElementById('housingLoanMonthlySavings');
             if(loanSavingsEl && (!loanSavingsEl.value || loanSavingsEl.dataset.userSet!=='1')) loanSavingsEl.value=monthlySavings;
+            const upgradeLoanSavingsEl=document.getElementById('housingUpgradeLoanMonthlySavings');
+            if(upgradeLoanSavingsEl && (!upgradeLoanSavingsEl.value || upgradeLoanSavingsEl.dataset.userSet!=='1')) upgradeLoanSavingsEl.value=monthlySavings;
             const targetExpenseCurrent=Math.max(0,parseFloat(inputs.targetMonthlyExpense.value)||300);
-            const inflationRate=(parseFloat(inputs.inflationRate.value)||2.3)/100;
+            const inflationRateParsed=parseFloat(inputs.inflationRate.value);
+            const inflationRate=(Number.isFinite(inflationRateParsed)?inflationRateParsed:2.3)/100;
             const weightedAnnualReturn=parseFloat(document.getElementById('calcWeightedReturn').innerText)/100||0;
             const housingStatus=document.getElementById('housingStatus')?.value||'owner';
             const homePurchaseAge=Math.max(currentAge,parseInt(document.getElementById('homePurchaseAge')?.value)||currentAge);
             const homePurchasePriceCurrent=Math.max(0,parseFloat(document.getElementById('homePurchasePrice')?.value)||0);
-            const housingLoanEnabled=housingStatus==='none' && (document.getElementById('housingLoanEnabled')?.value||'no')==='yes';
-            const housingLoanLTV=Math.min(100,Math.max(0,parseFloat(document.getElementById('housingLoanLTV')?.value)||0))/100;
-            const housingLoanRate=Math.min(30,Math.max(0,parseFloat(document.getElementById('housingLoanRate')?.value)||0))/100;
-            const housingLoanTerm=Math.max(1,Math.min(40,parseFloat(document.getElementById('housingLoanTerm')?.value)||30));
-            const housingLoanMonthlySavings=Math.max(0,Math.min(5000,parseFloat(document.getElementById('housingLoanMonthlySavings')?.value)||monthlySavings));
+            // 유주택자의 '갈아타기' 시나리오: 무주택자 매수 시나리오와 동일한 대출 계산 로직을 재사용하되,
+            // 입력 필드만 housingUpgrade* 계열에서 읽어옵니다.
+            const housingUpgradeEnabled=housingStatus==='owner' && (document.getElementById('housingUpgradeEnabled')?.value||'no')==='yes';
+            const housingUpgradeAge=Math.max(currentAge,parseInt(document.getElementById('housingUpgradeAge')?.value)||currentAge);
+            const housingUpgradePriceCurrent=Math.max(0,parseFloat(document.getElementById('housingUpgradePrice')?.value)||0);
+            const usingUpgradeLoanFields=housingStatus==='owner';
+            const housingLoanEnabled=usingUpgradeLoanFields
+                ? (housingUpgradeEnabled && (document.getElementById('housingUpgradeLoanEnabled')?.value||'no')==='yes')
+                : (housingStatus==='none' && (document.getElementById('housingLoanEnabled')?.value||'no')==='yes');
+            const housingLoanLTV=Math.min(100,Math.max(0,parseFloat(document.getElementById(usingUpgradeLoanFields?'housingUpgradeLoanLTV':'housingLoanLTV')?.value)||0))/100;
+            const housingLoanRate=Math.min(30,Math.max(0,parseFloat(document.getElementById(usingUpgradeLoanFields?'housingUpgradeLoanRate':'housingLoanRate')?.value)||0))/100;
+            const housingLoanTerm=Math.max(1,Math.min(40,parseFloat(document.getElementById(usingUpgradeLoanFields?'housingUpgradeLoanTerm':'housingLoanTerm')?.value)||30));
+            const housingLoanMonthlySavings=Math.max(0,Math.min(5000,parseFloat(document.getElementById(usingUpgradeLoanFields?'housingUpgradeLoanMonthlySavings':'housingLoanMonthlySavings')?.value)||monthlySavings));
             const currentREValue=housingStatus==='owner'?Math.max(0,parseFloat(inputs.realEstateValue.value)||0):0;
             const appliedGrowthInput=inputs.realEstateGrowthRate;
-            const reGrowthRate=(parseFloat(appliedGrowthInput?.value)||3.5)/100;
+            const reGrowthRateParsed=parseFloat(appliedGrowthInput?.value);
+            const reGrowthRate=(Number.isFinite(reGrowthRateParsed)?reGrowthRateParsed:3.5)/100;
             const reAction=inputs.realEstateRetireAction.value;
             const rentalIncomeCurrent=Math.max(0,parseFloat(inputs.rentalIncome.value)||0);
             const dividendMode=document.getElementById('dividendMode')?.checked??true;
@@ -1647,6 +1721,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
             const monthlyREGrowth=Math.pow(1+reGrowthRate,1/12)-1;
             let finWealth=currentFinAssets,reWealth=currentREValue,dividendAssets=0,growthAssets=0,finWealthAtRetire=0,reWealthAtRetire=0,depletionAge=null,homePurchased=(housingStatus!=='none' && housingStatus!=='never');
             let housingLoanBalance=0, housingLoanScheduledPayment=0, housingLoanAtRetire=0, housingEquityUsed=0, housingPurchaseCostAtPurchase=0;
+            let housingUpgraded=false, housingUpgradeCostAtPurchase=0, housingUpgradeEquityUsed=0, housingUpgradeSaleSurplus=0;
             const wealthTimeline=[];
             let retirementInitialized=false;
 
@@ -1670,6 +1745,26 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
                     finWealth=Math.max(0,finWealth-housingEquityUsed);
                     reWealth+=purchaseCost;
                     homePurchased=true;
+                }
+
+                // 유주택자의 갈아타기(이사): 현재 아파트를 매도한 자금으로 새 아파트를 매수합니다.
+                // 매도대금이 새 집 구입에 필요한 자기자금(가격-대출)보다 많으면 남는 돈은 금융자산으로 편입하고,
+                // 부족하면 그 부족분만큼 금융자산에서 추가로 사용합니다.
+                if(housingStatus==='owner' && housingUpgradeEnabled && !housingUpgraded && age===housingUpgradeAge && month===0){
+                    const saleProceeds=reWealth;
+                    const purchaseCost=housingUpgradePriceCurrent*inflationMultiplier;
+                    const loanPrincipal=housingLoanEnabled ? purchaseCost*housingLoanLTV : 0;
+                    housingLoanBalance=loanPrincipal;
+                    housingLoanScheduledPayment=loanPrincipal>0
+                        ? (housingLoanRate===0 ? loanPrincipal/(housingLoanTerm*12) : loanPrincipal*(housingLoanRate/12)/(1-Math.pow(1+housingLoanRate/12,-housingLoanTerm*12)))
+                        : 0;
+                    housingUpgradeCostAtPurchase=purchaseCost;
+                    const downPayment=purchaseCost-loanPrincipal;
+                    housingUpgradeEquityUsed=Math.max(0,downPayment-saleProceeds);
+                    housingUpgradeSaleSurplus=Math.max(0,saleProceeds-downPayment);
+                    finWealth=Math.max(0,finWealth-housingUpgradeEquityUsed+housingUpgradeSaleSurplus);
+                    reWealth=purchaseCost;
+                    housingUpgraded=true;
                 }
 
                 // 주택담보대출 상환액은 현금흐름에서 먼저 차감합니다.
@@ -2157,6 +2252,14 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       {id:'realEstateRegion',type:'select',housingScope:'owner',title:'아파트가 있는 지역은 어디인가요?',selectFrom:'realEstateRegion'},
       {id:'realEstateDistrict',type:'select',housingScope:'owner',title:'세부 지역을 선택해주세요.',selectFrom:'realEstateDistrict'},
       {id:'realEstateGrowthRate',housingScope:'owner',title:'아파트 연 예상 상승률은 얼마로 할까요?',help:'지역별 기본값이 자동으로 들어갑니다. 원하면 직접 수정할 수 있습니다.',unit:'%',min:0,max:15,step:.1},
+      {id:'housingUpgradeEnabled',type:'choice',title:'앞으로 다른 아파트로 갈아타기(이사) 계획이 있나요?',help:'현재 아파트를 매도하고 새 아파트를 매수하는 갈아타기 시나리오를 반영할 수 있습니다.',choices:[['no','갈아타기 계획 없음'],['yes','갈아타기 예정']]},
+      {id:'housingUpgradeAge',title:'몇 살쯤 갈아타기(이사)를 할 예정인가요?',help:'갈아타기를 선택한 경우에만 나오는 질문입니다.',unit:'세',min:20,max:100},
+      {id:'housingUpgradePrice',title:'갈아탈 아파트 가격은 얼마인가요? <span class="text-rose-600">(현재 기준 가격)</span>',help:'오늘 현재 기준으로 생각하는 갈아탈 아파트 가격을 입력해주세요. 갈아타는 시점까지 물가상승률을 자동 반영합니다.',unit:'만원',min:0,max:1000000},
+      {id:'housingUpgradeLoanEnabled',type:'choice',title:'갈아타기에 대출을 사용할까요?',help:'현재 아파트를 매도한 자금으로 부족한 금액을 대출로 충당할지 선택합니다.',choices:[['no','대출 없이 갈아타기'],['yes','대출 사용']]},
+      {id:'housingUpgradeLoanLTV',title:'갈아탈 아파트 가격의 몇 %를 대출받을까요?',help:'대출을 선택한 경우에만 입력합니다.',unit:'%',min:0,max:100},
+      {id:'housingUpgradeLoanRate',title:'대출 금리는 연 몇 %로 가정할까요?',help:'대출을 선택한 경우에만 입력합니다.',unit:'%',min:0,max:15,step:.1},
+      {id:'housingUpgradeLoanTerm',title:'대출을 몇 년 동안 상환할까요?',help:'대출을 선택한 경우에만 입력합니다.',unit:'년',min:1,max:40},
+      {id:'housingUpgradeLoanMonthlySavings',title:'대출을 갚는 동안에도 매달 얼마를 적립·투자할까요?',help:'갈아타기 대출 원리금과 별도로, 대출 상환 중 유지할 월 적립액을 정해주세요.',unit:'만원',min:0,max:5000},
       {id:'realEstateRetireAction',type:'choice',title:'은퇴 후 아파트는 어떻게 할까요?',help:'은퇴 후 주택을 계속 보유할지, 다운사이징할지, 월세·주택연금으로 소득화할지 선택해주세요.',choices:[['hold','계속 실거주 보유'],['downsize','은퇴 시 매각/다운사이징'],['rent','은퇴 후 월세/주택연금 전환']]},
       {id:'rentalIncome',title:'은퇴 후 월세·주택연금 예상 수령액은?',help:'월세/주택연금 전환을 선택한 경우에만 사용됩니다. 현재 가치 기준입니다.',unit:'만원',min:0,max:500}
     ]},
@@ -2169,7 +2272,9 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       {id:'govRank',type:'select',title:'현재 직급·계급을 선택해주세요.',selectFrom:'govRank'},
       {id:'govStep',type:'select',title:'현재 호봉을 선택해주세요.',selectFrom:'govStep'},
       {id:'govYears',title:'공무원연금 기여금을 몇 년 납부할 예정인가요?(최대 36년)',help:'기여금 납부기간은 최대 36년까지 입력할 수 있습니다.',unit:'년',min:10,max:36},
-      {id:'govWageGrowth',title:'향후 연평균 보수 상승률은?',help:'모르겠다면 기본값 2.5%를 사용해도 됩니다.',unit:'%',min:0,max:8,step:.1}
+      {id:'govWageGrowth',title:'향후 연평균 보수 상승률은?',help:'모르겠다면 기본값 2.5%를 사용해도 됩니다.',unit:'%',min:0,max:8,step:.1},
+      {id:'govPensionReform',type:'toggle',title:'공무원연금 개악(수급액 축소) 시나리오를 가정할까요?',help:'켜면 향후 연금 개혁으로 공무원연금 수급액이 줄어드는 상황을 가정해 최종보고서를 계산합니다.'},
+      {id:'govPensionReformCutPct',title:'연금 수급액을 몇 % 축소해서 계산할까요?',help:'개악 시나리오를 켠 경우에만 사용됩니다. 예: 20을 입력하면 연금액이 20% 줄어든다고 가정합니다.',unit:'%',min:0,max:50}
     ]}
   ];
 
@@ -2200,6 +2305,12 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       return (el('housingStatus')?.value||'owner')==='owner';
     if(q.id==='rentalIncome')
       return (el('housingStatus')?.value||'owner')==='owner' && el('realEstateRetireAction')?.value==='rent';
+    if(q.id==='housingUpgradeEnabled')
+      return (el('housingStatus')?.value||'owner')==='owner';
+    if(['housingUpgradeAge','housingUpgradePrice','housingUpgradeLoanEnabled'].includes(q.id))
+      return (el('housingStatus')?.value||'owner')==='owner' && el('housingUpgradeEnabled')?.value==='yes';
+    if(['housingUpgradeLoanLTV','housingUpgradeLoanRate','housingUpgradeLoanTerm','housingUpgradeLoanMonthlySavings'].includes(q.id))
+      return (el('housingStatus')?.value||'owner')==='owner' && el('housingUpgradeEnabled')?.value==='yes' && el('housingUpgradeLoanEnabled')?.value==='yes';
 
     if(q.id==='dividendAllocation'||q.id==='dividendYield')
       return (conditionalChoices.dividendMode ?? 'no')==='yes';
@@ -2207,8 +2318,10 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     if(['npsIncome','npsYears','npsStartAge'].includes(q.id))
       return pensionType==='national';
 
-    if(['govJobGroup','govRank','govStep','govYears','govWageGrowth'].includes(q.id))
+    if(['govJobGroup','govRank','govStep','govYears','govWageGrowth','govPensionReform'].includes(q.id))
       return pensionType==='gov';
+    if(q.id==='govPensionReformCutPct')
+      return pensionType==='gov' && !!el('govPensionReform')?.checked;
 
     return true;
   }
@@ -2346,6 +2459,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     }else if(id==='housingStatus'){
       syncValue(id,v);
       if(v!=='none') syncValue('housingLoanEnabled','no');
+      if(v!=='owner') syncValue('housingUpgradeEnabled','no');
     }else{
       syncValue(id,v);
     }
@@ -2499,7 +2613,9 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     let pensionRows='';
     if(pension==='공무원·사학연금'){
       const job=selectedText('govJobGroup'), rank=selectedText('govRank'), step=valueOf('govStep')||'-';
-      pensionDetail=`${job} · ${rank} · ${step}호봉`;
+      const reformOn=el('govPensionReform')?.checked;
+      const reformCut=reportNumber('govPensionReformCutPct',20);
+      pensionDetail=`${job} · ${rank} · ${step}호봉${reformOn?` · 개악 시나리오(-${reformCut.toFixed(0)}%) 적용`:''}`;
       pensionRows=`
         <tr><td>직군</td><td class="num">${esc(job)}</td></tr>
         <tr><td>직급·계급</td><td class="num">${esc(rank)}</td></tr>
@@ -2508,7 +2624,8 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
         <tr><td>연평균 보수 인상률</td><td class="num">${esc(valueOf('govWageGrowth'))}%</td></tr>
         <tr><td>2026 호봉 기본급</td><td class="num">${esc(textOf('calcGovBaseIncome')||'-')}</td></tr>
         <tr><td>예상 평균 기준소득월액</td><td class="num">${esc(textOf('calcGovAvgIncome')||'-')}</td></tr>
-        <tr><td>기준소득월액 산출 설명</td><td class="num">${esc(textOf('govIncomeDetail')||'자동 추정')}</td></tr>`;
+        <tr><td>기준소득월액 산출 설명</td><td class="num">${esc(textOf('govIncomeDetail')||'자동 추정')}</td></tr>
+        <tr class="${reformOn?'bg-rose-50':''}"><td>공무원연금 개악 시나리오</td><td class="num">${reformOn?`<strong>적용 · 수급액 ${reformCut.toFixed(0)}% 축소 가정</strong>`:'미적용'}</td></tr>`;
     }else{
       pensionDetail=`가입기간 ${valueOf('npsYears')||'-'}년 · 연금 개시 ${selectedText('npsStartAge')}세`;
       pensionRows=`
@@ -2549,6 +2666,45 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
           <tr class="bg-rose-50"><td><strong>은퇴 시점 예상 주택가치</strong></td><td class="num"><strong>${esc(re)}</strong></td></tr>
           <tr><td>은퇴 후 처리 방식</td><td class="num">${esc(action)}</td></tr>
         </table></div></div>`;
+
+      // 갈아타기(이사) 시나리오 상세
+      const upgradeEnabled=valueOf('housingUpgradeEnabled')==='yes';
+      if(upgradeEnabled){
+        const currentAgeX2=reportNumber('currentAge',38);
+        const upgradeAge=reportNumber('housingUpgradeAge',currentAgeX2);
+        const upgradePriceCurrent=reportNumber('housingUpgradePrice',0);
+        const inflRate2=reportNumber('inflationRate',0)/100;
+        const upgradePriceAtPurchase=upgradePriceCurrent*Math.pow(1+inflRate2,Math.max(0,upgradeAge-currentAgeX2));
+        const upgradeLoanEnabled=valueOf('housingUpgradeLoanEnabled')==='yes';
+        const upgradeLtv=Math.min(100,Math.max(0,reportNumber('housingUpgradeLoanLTV',0)))/100;
+        const upgradeRate=reportNumber('housingUpgradeLoanRate',0)/100;
+        const upgradeTerm=Math.max(1,reportNumber('housingUpgradeLoanTerm',30));
+        const upgradeLoanPrincipal=upgradeLoanEnabled?upgradePriceAtPurchase*upgradeLtv:0;
+        const upgradeMonthlyPayment=upgradeLoanPrincipal>0?(upgradeRate===0?upgradeLoanPrincipal/(upgradeTerm*12):upgradeLoanPrincipal*(upgradeRate/12)/(1-Math.pow(1+upgradeRate/12,-upgradeTerm*12))):0;
+        const timelineForUpgrade=window.latestWealthTimeline||[];
+        const upgradeRetirePoint=timelineForUpgrade.find(d=>d.age===reportNumber('retireAge',60))||{};
+        const upgradeRemainLoan=Number(upgradeRetirePoint.loanBalance)||0;
+        const upgradeLoanSavings=reportNumber('housingUpgradeLoanMonthlySavings',monthlySavings);
+        // 매도대금 대비 자기자금 부족/잉여분은 대략적인 추정치로, 실제 매도 시점의 정확한 현재 주택가치와는 차이가 있을 수 있습니다.
+        housingSection+=`<div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🔁 갈아타기(이사) 계획 상세</div>
+          <div class="wizard-report-section-sub">현재 아파트를 매도한 자금으로 갈아탈 아파트를 매수하는 시나리오입니다. 매도 시점까지의 상승률이 반영된 매도가에서 새 아파트 자기자금을 충당하고, 부족분만 대출·금융자산에서 사용합니다.</div>
+          <div class="overflow-x-auto"><table class="wizard-report-table">
+            <tr><td>갈아타기 예정 연령</td><td class="num"><strong>${upgradeAge}세</strong></td></tr>
+            <tr><td>현재 기준 갈아탈 아파트 가격</td><td class="num"><strong>${esc(fm(upgradePriceCurrent))}</strong></td></tr>
+            <tr class="bg-amber-50"><td><strong>갈아타는 시점 예상 아파트 가격</strong></td><td class="num"><strong>${esc(fm(upgradePriceAtPurchase))}</strong></td></tr>
+            <tr><td>대출 사용</td><td class="num">${upgradeLoanEnabled?'사용':'미사용'}</td></tr>
+            ${upgradeLoanEnabled?`
+            <tr><td>대출 비율 (LTV)</td><td class="num">${reportNumber('housingUpgradeLoanLTV',0).toFixed(0)}%</td></tr>
+            <tr><td>연 대출금리</td><td class="num">${(upgradeRate*100).toFixed(1)}%</td></tr>
+            <tr><td>상환 기간</td><td class="num">${upgradeTerm}년</td></tr>
+            <tr class="bg-amber-50"><td><strong>갈아타기 시점 주담대 원금</strong></td><td class="num"><strong>${esc(fm(upgradeLoanPrincipal))}</strong></td></tr>
+            <tr><td>주담대 월 원리금</td><td class="num"><strong>${esc(fm(upgradeMonthlyPayment))}</strong></td></tr>
+            <tr><td>대출 상환 중 월 적립액</td><td class="num">${esc(fm(upgradeLoanSavings))}</td></tr>
+            <tr><td>은퇴 시 잔존 대출</td><td class="num">${esc(fm(upgradeRemainLoan))}</td></tr>`:''}
+          </table></div>
+          <div class="wizard-summary"><strong>핵심:</strong> ${upgradeAge}세 갈아타기 시점 예상 아파트 가격은 ${fm(upgradePriceAtPurchase)}이며, 현재 아파트 매도대금으로 자기자금을 충당한 뒤 ${upgradeLoanEnabled?`부족분은 주담대 ${fm(upgradeLoanPrincipal)}로 조달합니다.`:'대출 없이 매도대금 범위 내에서 진행하는 것으로 가정합니다.'}</div>
+        </div>`;
+      }
     }else if(housing==='none'){
       const currentAgeX=reportNumber('currentAge',38);
       const purchaseAge=reportNumber('homePurchaseAge',60);
@@ -2618,7 +2774,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     const assetMixTop=assetMixPct.map((v,i)=>({label:assetMixLabels[i],pct:v})).filter(x=>x.pct>0.05).sort((a,b)=>b.pct-a.pct).slice(0,3);
     const nameParts=`${age}세 · ${retire}세 은퇴 목표 · ${life}세까지 시뮬레이션`;
 
-    return `<div class="wizard-report-wrap wizard-report-detailed">
+    return `<div class="wizard-report-wrap wizard-report-detailed" id="wizardDetailedReportCapture">
       <div class="wizard-report-hero">
         <div class="wizard-report-eyebrow">FINAL RETIREMENT REPORT · DETAILED</div>
         <div class="wizard-report-hero-title">${esc(nameParts)}</div>
@@ -2673,7 +2829,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🧭 10. 종합 진단</div><div class="wizard-report-section-sub">v18에서 제공하던 통합 진단 영역을 상세보고서에 포함했습니다.</div><div class="text-xs text-slate-600 leading-relaxed mt-3">${recommendation}</div></div>
 
       <div class="wizard-report-section"><div class="wizard-report-section-title">ℹ️ 보고서 해석 안내</div><div class="wizard-report-section-sub">이 보고서는 입력한 수익률·물가·주택상승률·연금·세율 등의 가정에 따라 계산된 추정 결과입니다. 실제 투자수익, 주택가격, 세금, 연금 수령액과는 차이가 날 수 있습니다.</div></div>
-      <div class="wizard-report-actions"><button class="wizard-btn back" onclick="wizardBackToEdit()">설정 다시 보기</button><button class="wizard-btn next" onclick="window.print()">상세 리포트 인쇄 / PDF</button></div>
+      <div class="wizard-report-actions"><button class="wizard-btn back" onclick="window.wizardGoToStart()">처음으로 돌아가기</button><button class="wizard-btn next" id="wizardCaptureBtn" onclick="window.wizardCaptureReport()">📸 상세보고서 캡처하기</button></div>
     </div>`;
   }
   let wizardFinalChart=null;
@@ -2747,15 +2903,114 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       const safeTotal=el('kpi-totalWealthAtRetire')?.textContent||'계산 확인 필요';
       const safeNet=el('kpi-netWealthAtRetire')?.textContent||safeTotal;
       const safeCoverage=el('kpi-coverageRatio')?.textContent||'0%';
-      body.innerHTML=`<div class="wizard-report-wrap"><div class="wizard-report-hero"><div class="wizard-report-eyebrow">FINAL RETIREMENT REPORT</div><div class="wizard-report-hero-title">나의 노후 자산 상세보고서</div><div class="wizard-report-hero-sub">입력하신 조건으로 계산된 핵심 결과를 표시합니다.</div><div class="wizard-report-grid"><div class="wizard-report-kpi"><div class="wizard-report-kpi-label">은퇴 시점 총자산</div><div class="wizard-report-kpi-value">${escapeHtml(safeTotal)}</div></div><div class="wizard-report-kpi"><div class="wizard-report-kpi-label">은퇴 시점 순자산</div><div class="wizard-report-kpi-value">${escapeHtml(safeNet)}</div></div><div class="wizard-report-kpi"><div class="wizard-report-kpi-label">생활비 충족률</div><div class="wizard-report-kpi-value">${escapeHtml(safeCoverage)}</div></div></div></div><div class="wizard-report-section"><div class="wizard-report-section-title">입력 조건을 기준으로 계산된 요약</div><div class="wizard-report-section-sub">상세 표 일부 생성에 문제가 있었지만 핵심 계산 결과는 유지됩니다.</div></div><div class="wizard-report-actions"><button class="wizard-btn back" onclick="wizardBackToEdit()">설정 다시 보기</button><button class="wizard-btn next" onclick="window.print()">리포트 인쇄 / PDF</button></div></div>`;
+      body.innerHTML=`<div class="wizard-report-wrap" id="wizardDetailedReportCapture"><div class="wizard-report-hero"><div class="wizard-report-eyebrow">FINAL RETIREMENT REPORT</div><div class="wizard-report-hero-title">나의 노후 자산 상세보고서</div><div class="wizard-report-hero-sub">입력하신 조건으로 계산된 핵심 결과를 표시합니다.</div><div class="wizard-report-grid"><div class="wizard-report-kpi"><div class="wizard-report-kpi-label">은퇴 시점 총자산</div><div class="wizard-report-kpi-value">${escapeHtml(safeTotal)}</div></div><div class="wizard-report-kpi"><div class="wizard-report-kpi-label">은퇴 시점 순자산</div><div class="wizard-report-kpi-value">${escapeHtml(safeNet)}</div></div><div class="wizard-report-kpi"><div class="wizard-report-kpi-label">생활비 충족률</div><div class="wizard-report-kpi-value">${escapeHtml(safeCoverage)}</div></div></div></div><div class="wizard-report-section"><div class="wizard-report-section-title">입력 조건을 기준으로 계산된 요약</div><div class="wizard-report-section-sub">상세 표 일부 생성에 문제가 있었지만 핵심 계산 결과는 유지됩니다.</div></div><div class="wizard-report-actions"><button class="wizard-btn back" onclick="window.wizardGoToStart()">처음으로 돌아가기</button><button class="wizard-btn next" id="wizardCaptureBtn" onclick="window.wizardCaptureReport()">📸 상세보고서 캡처하기</button></div></div>`;
       return true;
     }finally{ detailedReportOpening=false; }
   };
   window.__openRetirementDetailedReport=function(){ return window.wizardOpenFullReport(); };
+
+  // "친구에게 이 프로그램 추천하기" 버튼 동작:
+  // 카카오톡 SDK 대신 브라우저/휴대폰 기본 공유 기능(Web Share API)을 사용해 링크를 공유합니다.
+  // Web Share API를 지원하지 않는 환경(주로 데스크톱 브라우저)에서는 링크를 클립보드에 복사합니다.
+  // 공유창을 열고 이 페이지로 돌아오면(탭/앱 전환 복귀) '상세보고서 보기' 버튼의 잠금을 해제하고,
+  // 감지가 어려운 환경을 위한 안전장치로 일정 시간 후 자동 해제도 함께 둡니다.
+  let wizardShareTriggered=false;
+  let wizardShareUnlockTimer=null;
+  window.wizardTriggerKakaoShare=function(){
+    wizardShareTriggered=true;
+    const shareBtn=el('wizardShareBtn');
+    if(shareBtn){ shareBtn.textContent='공유창을 확인해주세요 →'; }
+    const SHARE_URL='https://getrichmore.github.io/retirement-planning/';
+    const SHARE_TITLE='노후 자산 시뮬레이션';
+    const SHARE_TEXT='노후 자산 시뮬레이션\n몇 가지 질문에 답하기만 하면, 내 노후 자산이 얼마나 준비되어 있는지 바로 확인할 수 있어요.';
+
+    if(navigator.share){
+      navigator.share({ title:SHARE_TITLE, text:SHARE_TEXT, url:SHARE_URL })
+        .then(()=>{ wizardUnlockReportBtn(); })
+        .catch(e=>{ console.warn('공유 취소 또는 실패:', e); });
+    }else if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(SHARE_URL).then(()=>{
+        const hint=el('wizardShareHint');
+        if(hint){ hint.textContent='링크가 복사되었습니다. 친구에게 붙여넣어 보내주세요! 📋'; hint.style.color='#2563eb'; hint.style.fontWeight='800'; }
+      }).catch(e=>{ console.warn('클립보드 복사 실패:', e); });
+    }else{
+      console.warn('이 브라우저는 공유 기능과 클립보드 복사를 지원하지 않습니다.');
+    }
+
+    if(wizardShareUnlockTimer) clearTimeout(wizardShareUnlockTimer);
+    wizardShareUnlockTimer=setTimeout(wizardUnlockReportBtn,6000);
+    document.addEventListener('visibilitychange',wizardOnVisibilityReturn);
+    return false;
+  };
+  function wizardOnVisibilityReturn(){
+    if(document.visibilityState==='visible' && wizardShareTriggered){
+      wizardUnlockReportBtn();
+    }
+  }
+  function wizardUnlockReportBtn(){
+    if(wizardShareUnlockTimer){ clearTimeout(wizardShareUnlockTimer); wizardShareUnlockTimer=null; }
+    document.removeEventListener('visibilitychange',wizardOnVisibilityReturn);
+    const btn=el('wizardOpenFullReportBtn');
+    if(btn){ btn.disabled=false; btn.style.opacity='1'; btn.style.cursor='pointer'; btn.textContent='✅ 상세보고서 보기'; }
+    const hint=el('wizardShareHint');
+    if(hint){ hint.textContent='공유해주셔서 감사합니다! 이제 상세보고서를 확인해보세요 🙌'; hint.style.color='#16a34a'; hint.style.fontWeight='800'; }
+  }
   window.wizardBackToEdit=function(){
     document.body.classList.add('wizard-active');
     el('wizardReportCard').classList.add('hidden');el('wizardCard').classList.remove('hidden');
     setStepUI();
+  };
+
+  // 상세보고서 화면에서 "처음으로 돌아가기": 입력값은 그대로 두고 맨 처음 시작 화면으로 돌아갑니다.
+  window.wizardGoToStart=function(){
+    document.body.classList.add('wizard-active');
+    W.started=false; W.step=1; W.q=0;
+    const reportCard=el('wizardReportCard'); if(reportCard) reportCard.classList.add('hidden');
+    const stepCard=el('wizardCard'); if(stepCard) stepCard.classList.add('hidden');
+    const startCard=el('wizardStartCard'); if(startCard) startCard.classList.remove('hidden');
+    window.scrollTo(0,0);
+  };
+
+  // "상세보고서 캡처하기": 상세보고서 화면 전체를 JPG 이미지로 캡처합니다.
+  // 모바일에서 파일 공유가 가능하면 공유 시트(사진 앱에 저장 등)를 띄우고,
+  // 지원하지 않는 환경에서는 이미지를 바로 다운로드합니다.
+  window.wizardCaptureReport=async function(){
+    const target=el('wizardDetailedReportCapture');
+    const btn=el('wizardCaptureBtn');
+    if(!target){ return; }
+    if(typeof html2canvas==='undefined'){
+      alert('캡처 기능을 불러오지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해주세요.');
+      return;
+    }
+    const originalText=btn?btn.textContent:'';
+    if(btn){ btn.disabled=true; btn.textContent='캡처 중...'; }
+    const actionBars=target.querySelectorAll('.wizard-report-actions');
+    actionBars.forEach(bar=>{ bar.dataset.prevDisplay=bar.style.display; bar.style.display='none'; });
+    try{
+      const canvas=await html2canvas(target,{backgroundColor:'#ffffff',scale:2,useCORS:true,windowWidth:target.scrollWidth,windowHeight:target.scrollHeight});
+      const dataUrl=canvas.toDataURL('image/jpeg',0.92);
+      const filename=`노후자산_상세보고서_${new Date().toISOString().slice(0,10)}.jpg`;
+      let shared=false;
+      try{
+        const blob=await (await fetch(dataUrl)).blob();
+        const file=new File([blob],filename,{type:'image/jpeg'});
+        if(navigator.canShare && navigator.canShare({files:[file]})){
+          await navigator.share({files:[file],title:'노후 자산 상세보고서'});
+          shared=true;
+        }
+      }catch(shareErr){ console.warn('공유 시트를 사용할 수 없어 다운로드로 대체합니다:',shareErr); }
+      if(!shared){
+        const a=document.createElement('a');
+        a.href=dataUrl; a.download=filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+    }catch(err){
+      console.error('보고서 캡처 실패:',err);
+      alert('보고서 캡처에 실패했습니다. 다시 시도해주세요.');
+    }finally{
+      actionBars.forEach(bar=>{ bar.style.display=bar.dataset.prevDisplay||''; });
+      if(btn){ btn.disabled=false; btn.textContent=originalText; }
+    }
   };
 
   // 최초 로드 후 wizard가 기본 화면을 장악하도록 합니다.
