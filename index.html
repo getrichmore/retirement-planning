@@ -197,7 +197,7 @@
         border-radius:10px; font-size:18px; font-weight:800; cursor:pointer;
     }
     .wizard-ad-gate-ad {
-        min-height:480px; display:flex; align-items:center; justify-content:center;
+        min-height:250px; width:300px; max-width:100%; display:flex; align-items:center; justify-content:center;
         background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden;
     }
     .wizard-ad-gate-actions { padding-top:10px; }
@@ -209,8 +209,8 @@
     .wizard-ad-gate-note { margin-top:7px; text-align:center; font-size:10px; color:#94a3b8; line-height:1.45; }
     @media(max-width:640px){
         .wizard-ad-gate { padding:8px; }
-        .wizard-ad-gate-card { width:min(350px,100%); border-radius:18px; padding:10px; }
-        .wizard-ad-gate-ad { min-height:480px; }
+        .wizard-ad-gate-card { width:min(330px,100%); border-radius:18px; padding:10px; }
+        .wizard-ad-gate-ad { min-height:250px; width:300px; max-width:100%; }
     }
 
     /* 애드핏 광고: 크기가 작아 화면 하단에 항상 고정(sticky)해도 콘텐츠를 크게 가리지 않음 */
@@ -634,7 +634,7 @@
 </div>
 <script type="text/javascript" src="//t1.kakaocdn.net/kas/static/ba.min.js" async></script>
 
-<!-- 상세보고서 진입 전 320×480 애드핏 광고 -->
+<!-- 상세보고서 진입 전 300×250 애드핏 광고 -->
 <div id="wizardAdGate" class="wizard-ad-gate no-print" aria-hidden="true">
   <div class="wizard-ad-gate-card" role="dialog" aria-modal="true" aria-labelledby="wizardAdGateTitle">
     <div class="wizard-ad-gate-head">
@@ -646,13 +646,13 @@
     </div>
     <div class="wizard-ad-gate-ad">
       <ins class="kakao_ad_area" style="display:none;"
-           data-ad-unit="DAN-NqY2lG2fKI50QVHK"
-           data-ad-width="320"
-           data-ad-height="480"></ins>
+           data-ad-unit="DAN-GsatUiV5i8mPlgYt"
+           data-ad-width="300"
+           data-ad-height="250"></ins>
     </div>
     <div class="wizard-ad-gate-actions">
       <button type="button" id="wizardAdGateContinue" class="wizard-ad-gate-button" disabled onclick="window.wizardContinueToFullReport()">광고 확인 후 상세보고서 보기 (5초)</button>
-      <div class="wizard-ad-gate-note">광고가 표시되지 않는 경우에도 잠시 후 상세보고서를 계속할 수 있습니다.</div>
+      <div id="wizardAdGateNote" class="wizard-ad-gate-note">광고가 표시되면 잠시 후 상세보고서를 계속할 수 있습니다.</div>
     </div>
   </div>
 </div>
@@ -3003,49 +3003,43 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     wizardShareTriggered=true;
     const shareBtn=el('wizardShareBtn');
     if(shareBtn){ shareBtn.textContent='공유창을 확인해주세요 →'; }
-    // GitHub Pages에서 카카오 인앱 브라우저가 리디렉션/상대경로 해석으로 막히는 상황을 줄이기 위해
-    // 공유 URL을 GitHub Pages의 실제 대표 주소(끝 슬래시 포함)로 고정합니다.
-    const SHARE_URL='https://getrichmore.github.io/retirement-planning/';
-    const SHARE_IMAGE='https://getrichmore.github.io/retirement-planning/main.png';
-    const SHARE_CANONICAL_URL='https://getrichmore.github.io/retirement-planning/';
-    const SHARE_TITLE='노후 자산 시뮬레이션';
-    const SHARE_DESC='몇 가지 질문에 답하기만 하면, 내 노후 자산이 얼마나 준비되어 있는지 바로 확인할 수 있어요.';
-    const SHARE_TEXT=`${SHARE_TITLE}\n${SHARE_DESC}`;
 
-    // 1순위: 카카오톡 공유 SDK — 카톡 인앱 브라우저를 포함해 가장 안정적으로 동작합니다.
-    if(window.Kakao && typeof window.Kakao.isInitialized==='function' && window.Kakao.isInitialized() && window.Kakao.Share && typeof window.Kakao.Share.sendDefault==='function'){
+    const SHARE_URL='https://getrichmore.github.io/retirement-planning/';
+    const SHARE_TITLE='노후 자산 시뮬레이션';
+    const SHARE_TEXT='몇 가지 질문에 답하면 내 노후 자산이 얼마나 준비되어 있는지 확인할 수 있어요.';
+
+    // 카카오톡 공유는 가장 단순한 "웹 링크가 있는 텍스트 템플릿"으로 발송합니다.
+    // 피드 템플릿의 버튼만 클릭되지 않는 환경에서도 메시지 전체가 웹 링크를 갖도록 합니다.
+    if(window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized() && window.Kakao.Share){
       try{
         window.Kakao.Share.sendDefault({
-          objectType:'feed',
-          content:{
-            title:SHARE_TITLE,
-            description:SHARE_DESC,
-            imageUrl:SHARE_IMAGE,
-            link:{
-              mobileWebUrl:SHARE_URL,
-              webUrl:SHARE_URL
-            }
-          },
-          buttons:[{
-            title:'노후 자산 시뮬레이션 열기',
-            link:{ mobileWebUrl:SHARE_URL, webUrl:SHARE_URL }
-          }]
+          objectType:'text',
+          text:`${SHARE_TITLE}\n${SHARE_TEXT}\n\n${SHARE_URL}`,
+          link:{
+            mobileWebUrl:SHARE_URL,
+            webUrl:SHARE_URL
+          }
         });
         wizardUnlockReportBtn();
         return false;
-      }catch(e){ console.warn('카카오 공유 SDK 실패, 기본 공유로 대체합니다:', e); }
+      }catch(e){
+        console.warn('카카오 공유 SDK 실패, 기본 공유로 대체합니다:',e);
+      }
     }
 
-    // 2순위: 브라우저 기본 공유 시트(Web Share API) → 3순위: 클립보드 복사
     if(navigator.share){
-      navigator.share({ title:SHARE_TITLE, text:SHARE_TEXT, url:SHARE_CANONICAL_URL })
-        .then(()=>{ wizardUnlockReportBtn(); })
-        .catch(e=>{ console.warn('공유 취소 또는 실패:', e); });
+      navigator.share({title:SHARE_TITLE,text:SHARE_TEXT,url:SHARE_URL})
+        .then(()=>wizardUnlockReportBtn())
+        .catch(e=>console.warn('공유 취소 또는 실패:',e));
     }else if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(SHARE_CANONICAL_URL).then(()=>{
+      navigator.clipboard.writeText(SHARE_URL).then(()=>{
         const hint=el('wizardShareHint');
-        if(hint){ hint.textContent='링크가 복사되었습니다. 친구에게 붙여넣어 보내주세요! 📋'; hint.style.color='#2563eb'; hint.style.fontWeight='800'; }
-      }).catch(e=>{ console.warn('클립보드 복사 실패:', e); });
+        if(hint){
+          hint.textContent='링크가 복사되었습니다. 친구에게 붙여넣어 보내주세요! 📋';
+          hint.style.color='#2563eb'; hint.style.fontWeight='800';
+        }
+        wizardUnlockReportBtn();
+      }).catch(e=>console.warn('클립보드 복사 실패:',e));
     }else{
       console.warn('이 브라우저는 공유 기능과 클립보드 복사를 지원하지 않습니다.');
     }
@@ -3091,11 +3085,27 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     gate.setAttribute('aria-hidden','false');
     document.body.style.overflow='hidden';
 
-    // 동적으로 삽입된 광고도 다시 KAS가 처리하도록 소스를 재요청합니다.
+    // 광고 영역은 요청하신 원본 KAS 마크업(display:none)을 그대로 유지하고,
+    // 모달을 연 뒤 KAS 스크립트를 한 번 더 로드하여 동적 영역도 처리하게 합니다.
     try{
       const ad=gate.querySelector('.kakao_ad_area');
-      if(ad){ ad.style.display='block'; }
-    }catch(e){}
+      if(ad){
+        ad.style.display='none';
+        ad.removeAttribute('data-kas-loaded');
+      }
+      setTimeout(()=>{
+        try{
+          const oldScripts=document.querySelectorAll('script[data-wizard-adfit-gate]');
+          oldScripts.forEach(x=>x.remove());
+          const script=document.createElement('script');
+          script.type='text/javascript';
+          script.src='//t1.kakaocdn.net/kas/static/ba.min.js';
+          script.async=true;
+          script.setAttribute('data-wizard-adfit-gate','true');
+          document.body.appendChild(script);
+        }catch(reloadErr){ console.warn('애드핏 재호출 실패:',reloadErr); }
+      },80);
+    }catch(e){ console.warn('애드핏 영역 초기화 실패:',e); }
 
     if(wizardAdGateTimer) clearInterval(wizardAdGateTimer);
     wizardAdGateTimer=setInterval(()=>{
