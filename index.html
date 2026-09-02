@@ -21,6 +21,8 @@
     <meta name="twitter:description" content="몇 가지 질문에 답하기만 하면, 내 노후 자산이 얼마나 준비되어 있는지 바로 확인할 수 있어요.">
     <meta name="twitter:image" content="https://getrichmore.github.io/retirement-planning/main.png">
 
+    <!-- 카카오톡 공유하기 SDK -->
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.8.2/kakao.min.js" crossorigin="anonymous"></script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js CDN -->
@@ -2938,9 +2940,30 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     const shareBtn=el('wizardShareBtn');
     if(shareBtn){ shareBtn.textContent='공유창을 확인해주세요 →'; }
     const SHARE_URL='https://getrichmore.github.io/retirement-planning/';
+    const SHARE_IMAGE='https://getrichmore.github.io/retirement-planning/main.png';
     const SHARE_TITLE='노후 자산 시뮬레이션';
-    const SHARE_TEXT='노후 자산 시뮬레이션\n몇 가지 질문에 답하기만 하면, 내 노후 자산이 얼마나 준비되어 있는지 바로 확인할 수 있어요.';
+    const SHARE_DESC='몇 가지 질문에 답하기만 하면, 내 노후 자산이 얼마나 준비되어 있는지 바로 확인할 수 있어요.';
+    const SHARE_TEXT=`${SHARE_TITLE}\n${SHARE_DESC}`;
 
+    // 1순위: 카카오톡 공유 SDK — 카톡 인앱 브라우저를 포함해 가장 안정적으로 동작합니다.
+    if(window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized() && window.Kakao.Share){
+      try{
+        window.Kakao.Share.sendDefault({
+          objectType:'feed',
+          content:{
+            title:SHARE_TITLE,
+            description:SHARE_DESC,
+            imageUrl:SHARE_IMAGE,
+            link:{ mobileWebUrl:SHARE_URL, webUrl:SHARE_URL }
+          },
+          buttons:[{ title:'웹으로 보기', link:{ mobileWebUrl:SHARE_URL, webUrl:SHARE_URL } }]
+        });
+        wizardUnlockReportBtn();
+        return false;
+      }catch(e){ console.warn('카카오 공유 SDK 실패, 기본 공유로 대체합니다:', e); }
+    }
+
+    // 2순위: 브라우저 기본 공유 시트(Web Share API) → 3순위: 클립보드 복사
     if(navigator.share){
       navigator.share({ title:SHARE_TITLE, text:SHARE_TEXT, url:SHARE_URL })
         .then(()=>{ wizardUnlockReportBtn(); })
@@ -3033,6 +3056,11 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
   // 최초 로드 후 wizard가 기본 화면을 장악하도록 합니다.
   document.addEventListener('DOMContentLoaded',function(){
     if(window.lucide) lucide.createIcons();
+    try{
+      if(window.Kakao && !window.Kakao.isInitialized()){
+        window.Kakao.init('e1fe6c2366a8b69cf8f635f59a552de6');
+      }
+    }catch(e){ console.warn('카카오 SDK 초기화 실패:', e); }
     try{initInputs();populateRealEstateDistricts();onRealEstateDistrictChange();onGovGroupChange();updatePortfolioDisplay();calculateAll();}catch(e){}
   });
 })();
