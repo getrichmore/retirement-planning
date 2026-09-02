@@ -1,0 +1,2723 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>노후 자산 시뮬레이션</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif;
+            background-color: #f8fafc;
+        }
+        /* Custom scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+        /* Range slider styling */
+        input[type=range] {
+            accent-color: #2563eb;
+        }
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background: white;
+            }
+        }
+    </style>
+
+<style id="wizard-styles">
+    body.wizard-active > header,
+    body.wizard-active > section.bg-slate-100,
+    body.wizard-active > footer { display:none !important; }
+
+    body.wizard-active main { max-width:none !important; padding:0 !important; }
+    body.wizard-active main > .grid { display:block !important; }
+    body.wizard-active main > .grid > .lg\:col-span-5 { display:none !important; }
+    body.wizard-active main > .grid > :last-child { display:none !important; }
+
+    #wizardApp {
+        min-height:100vh;
+        background:linear-gradient(180deg,#f8fafc 0%,#eef4ff 100%);
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        padding:28px 16px;
+    }
+    .wizard-shell { width:min(760px,100%); }
+    .wizard-brand { text-align:center; margin-bottom:22px; }
+    .wizard-brand-icon {
+        width:58px;height:58px;margin:0 auto 14px;border-radius:18px;
+        display:flex;align-items:center;justify-content:center;
+        background:#2563eb;color:white;box-shadow:0 12px 30px rgba(37,99,235,.22);
+    }
+    .wizard-card {
+        background:white;border:1px solid #e2e8f0;border-radius:26px;
+        box-shadow:0 20px 55px rgba(15,23,42,.10);overflow:hidden;
+    }
+    .wizard-top { padding:20px 24px 0; }
+    .wizard-progress { display:flex;gap:7px;margin-bottom:18px; }
+    .wizard-progress span { height:5px;flex:1;border-radius:999px;background:#e2e8f0;transition:.25s; }
+    .wizard-progress span.active { background:#2563eb; }
+    .wizard-progress span.done { background:#93c5fd; }
+    .wizard-body { padding:26px 28px 30px; }
+    .wizard-question { min-height:300px; }
+    .wizard-kicker { color:#2563eb;font-size:12px;font-weight:800;margin-bottom:8px; }
+    .wizard-title { font-size:25px;font-weight:900;color:#0f172a;letter-spacing:-.04em;line-height:1.25; }
+    .wizard-help { margin-top:9px;color:#64748b;font-size:13px;line-height:1.65; }
+    .wizard-input {
+        width:100%;margin-top:24px;padding:17px 18px;border:1px solid #cbd5e1;
+        border-radius:16px;background:#f8fafc;font-size:20px;font-weight:800;
+        outline:none;transition:.2s;
+    }
+    .wizard-input:focus { border-color:#2563eb;background:white;box-shadow:0 0 0 4px rgba(37,99,235,.10); }
+    .wizard-unit { position:relative; }
+    .wizard-unit input { padding-right:72px; }
+    .wizard-unit span { position:absolute;right:18px;bottom:18px;color:#64748b;font-weight:800; }
+    .wizard-choice-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:24px; }
+     .wizard-choice-grid.housing-status-grid { grid-template-columns:1fr; }
+    .wizard-choice-grid.housing-action-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+    @media(max-width:640px){ .wizard-choice-grid.housing-action-grid{grid-template-columns:1fr;} }
+    .wizard-choice {
+        padding:17px;border:1px solid #cbd5e1;border-radius:16px;background:#fff;
+        text-align:left;font-weight:800;color:#334155;transition:.2s;cursor:pointer;
+    }
+    .wizard-choice:hover { border-color:#93c5fd;background:#eff6ff; }
+    .wizard-choice.selected { border-color:#2563eb;background:#eff6ff;color:#1d4ed8;box-shadow:0 0 0 3px rgba(37,99,235,.08); }
+    .wizard-actions { display:flex;justify-content:space-between;gap:10px;margin-top:18px; }
+    .wizard-btn { border:0;border-radius:14px;padding:13px 18px;font-weight:800;cursor:pointer; }
+    .wizard-btn.back { background:#f1f5f9;color:#475569; }
+    .wizard-btn.next { background:#2563eb;color:white;min-width:120px; }
+    .wizard-btn.next:disabled { opacity:.45;cursor:not-allowed; }
+    .wizard-summary {
+        margin-top:20px;padding:13px 15px;background:#f8fafc;border:1px solid #e2e8f0;
+        border-radius:14px;color:#475569;font-size:12px;line-height:1.7;
+    }
+    .wizard-portfolio-row { margin-top:18px;padding:14px;border:1px solid #e2e8f0;border-radius:15px; }
+    .wizard-portfolio-head { display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:800; }
+    .wizard-portfolio-row input[type=range] { width:100%;margin-top:10px; }
+    .wizard-toggle {
+        display:flex;align-items:center;gap:10px;margin-top:16px;padding:14px 15px;
+        border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;font-size:13px;font-weight:700;
+    }
+    .wizard-small { font-size:11px;color:#94a3b8;margin-top:8px;line-height:1.5; }
+    
+    .wizard-final-chart-wrap { margin-top:18px; padding:18px; background:white; border:1px solid #e2e8f0; border-radius:20px; }
+    .wizard-final-chart-title { font-size:14px; font-weight:900; color:#0f172a; margin-bottom:4px; }
+    .wizard-final-chart-sub { font-size:11px; color:#64748b; line-height:1.6; margin-bottom:12px; }
+    .wizard-final-chart-canvas { position:relative; width:100%; height:340px; }
+    .wizard-asset-mix-grid { display:grid; grid-template-columns:minmax(260px, .9fr) minmax(320px, 1.1fr); gap:18px; align-items:center; margin-top:12px; }
+    @media(max-width:760px){ .wizard-asset-mix-grid{grid-template-columns:1fr;} }
+.wizard-report-wrap { width:min(1100px,100%); }
+    .wizard-report-head { display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px; }
+    .wizard-report-back { border:0;background:white;border:1px solid #cbd5e1;border-radius:12px;padding:9px 13px;font-weight:800;cursor:pointer; }
+    .wizard-report-hero { padding:24px; background:linear-gradient(135deg,#eff6ff 0%,#ffffff 58%,#f0fdf4 100%); border:1px solid #dbeafe; border-radius:22px; }
+    .wizard-report-eyebrow { font-size:11px;font-weight:900;letter-spacing:.08em;color:#2563eb;text-transform:uppercase; }
+    .wizard-report-hero-title { margin-top:7px;font-size:28px;font-weight:950;letter-spacing:-.045em;line-height:1.2;color:#0f172a; }
+    .wizard-report-hero-sub { margin-top:8px;color:#64748b;font-size:13px;line-height:1.65; }
+    .wizard-report-grid { display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:18px; }
+    .wizard-report-kpi { padding:15px;border:1px solid #e2e8f0;border-radius:16px;background:#fff; }
+    .wizard-report-kpi-label { font-size:11px;font-weight:800;color:#64748b; }
+    .wizard-report-kpi-value { margin-top:6px;font-size:20px;font-weight:950;color:#0f172a;letter-spacing:-.03em; }
+    .wizard-report-kpi-note { margin-top:5px;font-size:10px;color:#94a3b8;line-height:1.5; }
+    .wizard-report-section { margin-top:14px;padding:18px;border:1px solid #e2e8f0;border-radius:18px;background:#fff; }
+    .wizard-report-section-title { font-size:14px;font-weight:900;color:#0f172a;display:flex;align-items:center;gap:8px; }
+    .wizard-report-section-sub { margin-top:4px;font-size:11px;color:#94a3b8; }
+    .wizard-report-table { width:100%;border-collapse:collapse;margin-top:12px;font-size:11px; }
+    .wizard-report-table th { padding:9px 8px;text-align:left;color:#64748b;background:#f8fafc;border-bottom:1px solid #e2e8f0;font-weight:800; }
+    .wizard-report-table td { padding:9px 8px;border-bottom:1px solid #f1f5f9;color:#334155; }
+    .wizard-report-table td.num,.wizard-report-table th.num { text-align:right; }
+    .wizard-report-pill { display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:800; }
+    .wizard-report-actions { display:flex;gap:10px;margin-top:16px; }
+    .wizard-report-actions .wizard-btn { flex:1; }
+    @media(max-width:760px){ .wizard-report-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+    @media(max-width:640px){
+        #wizardApp{padding:12px;}
+        .wizard-body{padding:22px 18px 24px;}
+        .wizard-title{font-size:22px;}
+        .wizard-choice-grid{grid-template-columns:1fr;}
+    }
+
+
+    /* ===== Mobile-first refinement for phones ===== */
+    html { -webkit-text-size-adjust: 100%; }
+    @media(max-width:640px){
+        body { width:100%; min-width:0; overflow-x:hidden; }
+        #wizardApp {
+            width:100%;
+            min-height:100dvh;
+            box-sizing:border-box;
+            align-items:flex-start;
+            padding:8px;
+        }
+        .wizard-shell {
+            width:100%;
+            max-width:none;
+        }
+        .wizard-brand {
+            margin-bottom:12px;
+            padding:4px 4px 0;
+        }
+        .wizard-brand-icon {
+            width:50px;
+            height:50px;
+            margin-bottom:10px;
+            border-radius:16px;
+        }
+        .wizard-brand .text-2xl,
+        .wizard-brand .sm\:text-3xl {
+            font-size:24px !important;
+            line-height:1.2;
+        }
+        .wizard-brand p {
+            font-size:12px !important;
+            line-height:1.5;
+            margin-top:7px !important;
+        }
+        .wizard-card {
+            border-radius:18px;
+            box-shadow:0 12px 30px rgba(15,23,42,.08);
+        }
+        .wizard-top {
+            padding:14px 15px 0;
+        }
+        .wizard-progress {
+            gap:5px;
+            margin-bottom:12px;
+        }
+        .wizard-progress span { height:4px; }
+        .wizard-body {
+            padding:18px 14px 20px;
+        }
+        .wizard-question {
+            min-height:0;
+        }
+        .wizard-kicker {
+            font-size:11px;
+            margin-bottom:6px;
+        }
+        .wizard-title {
+            font-size:22px;
+            line-height:1.32;
+            letter-spacing:-.03em;
+            word-break:keep-all;
+        }
+        .wizard-help {
+            font-size:12px;
+            line-height:1.6;
+            word-break:keep-all;
+        }
+        .wizard-input {
+            margin-top:18px;
+            padding:14px 14px;
+            font-size:18px;
+            border-radius:14px;
+        }
+        .wizard-unit input { padding-right:56px; }
+        .wizard-unit span {
+            right:14px;
+            bottom:16px;
+            font-size:12px;
+        }
+        .wizard-choice-grid,
+        .wizard-choice-grid.housing-status-grid,
+        .wizard-choice-grid.housing-action-grid {
+            grid-template-columns:1fr !important;
+            gap:8px;
+            margin-top:18px;
+        }
+        .wizard-choice {
+            width:100%;
+            min-height:58px;
+            padding:14px 13px;
+            border-radius:14px;
+            font-size:13px;
+            line-height:1.45;
+            word-break:keep-all;
+        }
+        .wizard-actions {
+            margin-top:14px;
+            gap:8px;
+        }
+        .wizard-actions .wizard-btn {
+            flex:1;
+            min-width:0 !important;
+            min-height:48px;
+            padding:12px 10px;
+            font-size:14px;
+        }
+        .wizard-summary {
+            margin-top:14px;
+            padding:11px 12px;
+            font-size:11px;
+            line-height:1.6;
+        }
+        .wizard-portfolio-row {
+            margin-top:10px;
+            padding:12px;
+            border-radius:13px;
+        }
+        .wizard-portfolio-head {
+            display:block;
+            font-size:12px;
+            line-height:1.45;
+        }
+        .wizard-portfolio-head > .flex {
+            margin-top:8px;
+            justify-content:space-between;
+        }
+        .wizard-portfolio-row .wizard-unit {
+            width:112px !important;
+        }
+        .wizard-portfolio-row .wizard-input {
+            padding:10px 32px 10px 9px !important;
+            font-size:15px !important;
+        }
+        .wizard-portfolio-row .wizard-unit span {
+            bottom:11px;
+            right:9px;
+        }
+        .wizard-toggle {
+            min-height:48px;
+            padding:12px;
+            margin-top:10px;
+            font-size:12px;
+        }
+        .wizard-small {
+            font-size:10px;
+            line-height:1.45;
+        }
+        .wizard-final-chart-wrap {
+            margin-top:12px;
+            padding:12px;
+            border-radius:15px;
+        }
+        .wizard-final-chart-title {
+            font-size:13px;
+        }
+        .wizard-final-chart-sub {
+            font-size:10px;
+            line-height:1.5;
+            margin-bottom:8px;
+        }
+        .wizard-final-chart-canvas {
+            height:250px;
+        }
+        .wizard-asset-mix-grid {
+            grid-template-columns:1fr !important;
+            gap:12px;
+        }
+        .wizard-asset-mix-grid > * {
+            min-width:0;
+        }
+        .wizard-report-wrap {
+            width:100%;
+            max-width:none;
+        }
+        .wizard-report-head {
+            align-items:flex-start;
+            margin-bottom:12px;
+            gap:8px;
+        }
+        .wizard-report-head .text-2xl {
+            font-size:20px !important;
+            line-height:1.25;
+        }
+        .wizard-report-back {
+            flex:0 0 auto;
+            padding:8px 9px;
+            font-size:11px;
+        }
+        .wizard-report-hero {
+            padding:15px;
+            border-radius:16px;
+        }
+        .wizard-report-eyebrow {
+            font-size:9px;
+        }
+        .wizard-report-hero-title {
+            font-size:22px;
+            line-height:1.28;
+        }
+        .wizard-report-hero-sub {
+            font-size:11px;
+            line-height:1.55;
+        }
+        .wizard-report-grid {
+            grid-template-columns:repeat(2,minmax(0,1fr)) !important;
+            gap:7px;
+            margin-top:12px;
+        }
+        .wizard-report-kpi {
+            padding:11px 9px;
+            border-radius:12px;
+        }
+        .wizard-report-kpi-label {
+            font-size:9px;
+        }
+        .wizard-report-kpi-value {
+            font-size:16px;
+            line-height:1.2;
+        }
+        .wizard-report-kpi-note {
+            font-size:9px;
+        }
+        .wizard-report-section {
+            margin-top:10px;
+            padding:12px;
+            border-radius:14px;
+        }
+        .wizard-report-section-title {
+            font-size:13px;
+            line-height:1.35;
+        }
+        .wizard-report-section-sub {
+            font-size:10px;
+            line-height:1.45;
+        }
+        .wizard-report-table {
+            min-width:620px;
+            font-size:10px;
+        }
+        .wizard-report-table th,
+        .wizard-report-table td {
+            padding:7px 6px;
+        }
+        .wizard-report-actions {
+            flex-direction:column;
+            gap:8px;
+        }
+        .wizard-report-actions .wizard-btn {
+            width:100%;
+            min-height:48px;
+        }
+        /* Keep important inline-sized fields usable on narrow screens. */
+        #wizardBody input[style*="width:82px"] {
+            width:72px !important;
+        }
+        #wizardBody .wizard-unit[style*="width:120px"] {
+            width:108px !important;
+            margin-left:0 !important;
+        }
+        /* Better touch targets for selects and sliders. */
+        #wizardBody select,
+        #wizardBody input[type="number"] {
+            min-height:46px;
+            font-size:16px;
+        }
+        #wizardBody input[type="range"] {
+            height:24px;
+            margin-top:8px;
+        }
+    }
+
+    @media(max-width:380px){
+        #wizardApp { padding:6px; }
+        .wizard-body { padding-left:11px; padding-right:11px; }
+        .wizard-report-grid { grid-template-columns:1fr !important; }
+        .wizard-report-hero-title { font-size:20px; }
+        .wizard-report-kpi-value { font-size:18px; }
+        .wizard-choice { min-height:54px; }
+    }
+
+</style>
+
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col justify-between wizard-active">
+<div id="wizardApp" class="wizard-active">
+  <div class="wizard-shell">
+    <div class="wizard-brand">
+      <div class="wizard-brand-icon"><i data-lucide="piggy-bank" class="w-7 h-7"></i></div>
+      <div class="text-2xl sm:text-3xl font-black tracking-tight text-slate-900">노후 자산 시뮬레이션</div>
+      <p class="text-sm text-slate-500 mt-2">어려운 재테크 용어 없이, 질문에 하나씩 답하면 됩니다.</p>
+    </div>
+
+    <div id="wizardStartCard" class="wizard-card">
+      <div class="wizard-body text-center">
+        <div class="wizard-question flex flex-col items-center justify-center">
+          <div class="text-5xl mb-5">🌱</div>
+          <div class="wizard-title">내 노후 자산,<br>얼마나 준비되어 있을까요?</div>
+          <p class="wizard-help max-w-md">현재 상황부터 연금과 아파트까지 차근차근 입력하면<br>은퇴 후 자산 흐름을 한눈에 볼 수 있습니다.</p>
+          <button class="wizard-btn next mt-8" style="min-width:180px" onclick="wizardStart()">시뮬레이션 시작하기</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="wizardCard" class="wizard-card hidden">
+      <div class="wizard-top">
+        <div class="wizard-progress">
+          <span id="wprog1" class="active"></span><span id="wprog2"></span><span id="wprog3"></span><span id="wprog4"></span>
+        </div>
+        <div class="flex items-center justify-between text-xs font-bold text-slate-400">
+          <span id="wizardStepLabel">1단계 · 기본 설정</span>
+          <span id="wizardQuestionCount"></span>
+        </div>
+      </div>
+      <div id="wizardBody" class="wizard-body"></div>
+    </div>
+
+    <div id="wizardReportCard" class="wizard-card hidden">
+      <div class="wizard-body">
+        <div class="wizard-report-head">
+          <div>
+            <div class="text-xs font-bold text-blue-600">시뮬레이션 완료</div>
+            <div class="text-2xl font-black text-slate-900 mt-1">나의 노후 자산 보고서</div>
+          </div>
+          <button class="wizard-report-back" onclick="wizardBackToEdit()">설정 다시 보기</button>
+        </div>
+        <div class="wizard-summary">
+          지금까지 입력한 조건만으로 계산한 결과입니다. 아래 버튼을 누르면 예시 시나리오나 초기 화면으로 돌아가지 않고, <strong>현재 입력값 기준의 상세 최종보고서</strong>를 이어서 보여드립니다.
+        </div>
+        <div id="wizardReportSummary" class="mt-5"></div>
+        <button class="wizard-btn next mt-5 w-full" id="wizardOpenFullReportBtn" onclick="return window.__openRetirementDetailedReport();">상세 최종보고서 보기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+    <!-- Header Navbar -->
+    <header class="bg-slate-900 text-white border-b border-slate-800 sticky top-0 z-50 shadow-md no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="p-2 bg-blue-600 rounded-xl text-white shadow-lg shadow-blue-500/30">
+                    <i data-lucide="calculator" class="w-6 h-6"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-lg leading-tight flex items-center gap-2">
+                        은퇴 자산 & 공적연금 통합 시뮬레이터
+                        <span class="text-xs bg-blue-500/20 text-blue-300 font-normal px-2 py-0.5 rounded-full border border-blue-500/30">2026 Pro v2.0</span>
+                    </h1>
+                    <p class="text-xs text-slate-400">직군·급수별 공무원연금 정밀 산출 · 자산 비중 Smart Auto-balance</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2">
+                <button onclick="exportReport()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">리포트 인쇄/PDF</span>
+                </button>
+                <button onclick="resetToDefaults()" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    <span class="hidden sm:inline">초기화</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Quick Presets Bar -->
+    <section class="bg-slate-100 border-b border-slate-200 py-2.5 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center space-x-2 text-xs text-slate-600 font-medium">
+                <i data-lucide="sparkles" class="w-4 h-4 text-amber-500"></i>
+                <span>추천 맞춤 설정 (Presets):</span>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="applyPreset('seoulWorker')" class="px-2.5 py-1 text-xs bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-300 rounded-lg transition font-medium shadow-sm">
+                    🏙️ 38세 서울 일반 직장인 (S&P500 중심)
+                </button>
+                <button onclick="applyPreset('gov7')" class="px-2.5 py-1 text-xs bg-white hover:bg-indigo-50 text-slate-700 hover:text-indigo-600 border border-slate-300 rounded-lg transition font-medium shadow-sm">
+                    🏛️ 35세 7급 8호봉 지방직 공무원
+                </button>
+                <button onclick="applyPreset('teacher40')" class="px-2.5 py-1 text-xs bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-600 border border-slate-300 rounded-lg transition font-medium shadow-sm">
+                    🏫 42세 초등교사 (18호봉 / 40호봉 체계)
+                </button>
+                <button onclick="applyPreset('military45')" class="px-2.5 py-1 text-xs bg-white hover:bg-amber-50 text-slate-700 hover:text-amber-600 border border-slate-300 rounded-lg transition font-medium shadow-sm">
+                    🎖️ 45세 상사/소령 (군인연금/근속가산)
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content Container -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow w-full">
+        
+        <!-- Toast Notification Area -->
+        <div id="toast" class="hidden fixed bottom-5 right-5 bg-slate-900 text-white px-4 py-3 rounded-xl shadow-2xl z-50 flex items-center space-x-2 border border-slate-700 transition-all duration-300">
+            <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400"></i>
+            <span id="toast-message" class="text-sm">설정이 적용되었습니다.</span>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <!-- Left Column: Input Form (5 cols on lg) -->
+            <div class="lg:col-span-5 space-y-6 no-print">
+
+                <!-- Navigation Tabs for Input Categories -->
+                <div class="bg-white rounded-2xl p-1.5 shadow-sm border border-slate-200 flex space-x-1">
+                    <button onclick="switchTab('basic')" id="tab-btn-basic" class="flex-1 py-2 text-xs font-bold rounded-xl transition bg-blue-600 text-white shadow-sm flex items-center justify-center gap-1">
+                        <i data-lucide="user" class="w-3.5 h-3.5"></i> 기본/목표
+                    </button>
+                    <button onclick="switchTab('portfolio')" id="tab-btn-portfolio" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center gap-1">
+                        <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i> 적립 포트폴리오
+                    </button>
+                    <button onclick="switchTab('realestate')" id="tab-btn-realestate" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center gap-1">
+                        <i data-lucide="home" class="w-3.5 h-3.5"></i> 부동산 자산
+                    </button>
+                    <button onclick="switchTab('pension')" id="tab-btn-pension" class="flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center gap-1">
+                        <i data-lucide="landmark" class="w-3.5 h-3.5"></i> 연금 설정
+                    </button>
+                </div>
+
+                <!-- TAB 1: Basic Age & Target Expenses -->
+                <div id="tab-basic" class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-5">
+                    <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <h2 class="font-bold text-slate-900 flex items-center gap-2 text-sm">
+                            <i data-lucide="sliders" class="w-4 h-4 text-blue-600"></i>
+                            기본 연령 및 목표 생활비
+                        </h2>
+                        <span class="text-xs text-slate-400">Step 1 / 4</span>
+                    </div>
+
+                    <!-- Ages Group -->
+                    <div class="grid grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">현재 연령</label>
+                            <div class="relative">
+                                <input type="number" id="currentAge" value="38" min="20" max="80" oninput="calculateAll()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <span class="absolute right-3 top-2 text-xs text-slate-400">세</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">은퇴 목표 연령</label>
+                            <div class="relative">
+                                <input type="number" id="retireAge" value="60" min="40" max="85" oninput="calculateAll()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <span class="absolute right-3 top-2 text-xs text-slate-400">세</span>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">기대 수명</label>
+                            <div class="relative">
+                                <input type="number" id="lifeExpectancy" value="90" min="65" max="110" oninput="calculateAll()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <span class="absolute right-3 top-2 text-xs text-slate-400">세</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Current Liquid Financial Assets & Monthly Expense -->
+                    <div class="space-y-4 pt-2">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-semibold text-slate-700">현재 금융 자산 (부동산 제외)</label>
+                                <span class="text-xs text-slate-400">만원 단위 직접 입력</span>
+                            </div>
+                            <input type="number" id="currentAssets" min="0" max="1000000" step="10" value="8000" oninput="calculateAll()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p class="text-[11px] text-slate-400 mt-0.5">예적금, 주식, ETF, 펀드 등 보유 금융 자산</p>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-semibold text-slate-700">월 추가 적립/투자금액</label>
+                                <span class="text-xs text-slate-400">만원 단위 직접 입력</span>
+                            </div>
+                            <input type="number" id="monthlySavings" min="0" max="5000" step="1" value="150" oninput="calculateAll()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <p class="text-[11px] text-slate-400 mt-0.5">'적립 포트폴리오' 탭의 비중에 따라 배분 투자됩니다.</p>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-semibold text-slate-700">은퇴 후 필요 월 생활비 (현재가치)</label>
+                                <span id="display-targetMonthlyExpense" class="text-xs font-bold text-emerald-600">300 만원</span>
+                            </div>
+                            <input type="range" id="targetMonthlyExpense" min="100" max="1000" step="10" value="300" oninput="syncRange('targetMonthlyExpense')" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+                    </div>
+
+                    <!-- Economic Inflation Assumption -->
+                    <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-2">
+                        <div class="text-xs font-bold text-slate-700 flex items-center justify-between">
+                            <span>물가상승률 가정</span>
+                            <i data-lucide="trending-up" class="w-4 h-4 text-slate-400"></i>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-medium text-slate-600 mb-1">연 예상 물가상승률 (%)</label>
+                            <input type="number" id="inflationRate" value="2.8" step="0.1" min="0" max="10" oninput="calculateAll()" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                        <!-- Retirement Financial Asset Dividend Management -->
+                        <div class="p-3.5 bg-amber-50/80 rounded-xl border border-amber-200 space-y-3">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <div class="text-xs font-bold text-amber-900 flex items-center gap-1.5">
+                                        <i data-lucide="coins" class="w-4 h-4 text-amber-600"></i> 은퇴 후 금융자산 배당형 운용 (연금 종류와 무관)
+                                    </div>
+                                    <p class="text-[10px] text-amber-800 mt-1 leading-relaxed">
+                                        국민연금·공무원연금·사학연금 여부와 관계없이 적용되는 은퇴자산 설정입니다. 은퇴 시점에 금융자산의 일부만 배당형 상품으로 전환하며, 전환한 자산은 원금 자체의 자본이득은 가정하지 않고 지정한 배당률을 적용합니다.
+                                    </p>
+                                </div>
+                                <label class="shrink-0 text-[11px] font-bold text-amber-900 flex items-center gap-1.5 cursor-pointer">
+                                    <input type="checkbox" id="dividendMode" checked onchange="calculateAll()" class="accent-amber-600 w-4 h-4"> 사용
+                                </label>
+                            </div>
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">금융자산 중 배당형 전환 비율</label>
+                                    <div class="relative">
+                                        <input type="number" id="dividendAllocation" value="50" step="1" min="0" max="100" oninput="calculateAll()" class="w-full px-2.5 py-1.5 pr-8 bg-white border border-amber-200 rounded-lg text-xs font-bold">
+                                        <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">%</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label class="block text-[11px] font-semibold text-slate-600 mb-1">배당률</label>
+                                    <div class="relative">
+                                        <input type="number" id="dividendYield" value="4.0" step="0.1" min="0" max="20" oninput="calculateAll()" class="w-full px-2.5 py-1.5 pr-8 bg-white border border-amber-200 rounded-lg text-xs font-bold">
+                                        <span class="absolute right-2.5 top-1.5 text-xs text-slate-400">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-white/70 rounded-lg border border-amber-100 px-2.5 py-2 text-[10px] leading-relaxed text-amber-900">
+                                <div><strong>배당자산</strong> = 은퇴 금융자산 × 전환비율</div>
+                                <div><strong>월 배당금</strong> = 배당자산 잔액 × 연 배당률 ÷ 12</div>
+                                <div><strong>비배당자산</strong> = 나머지 금융자산 × 포트폴리오 연 수익률로 운용</div>
+                            </div>
+                            <p id="dividendModeNote" class="text-[10px] text-amber-800/80 leading-relaxed"></p>
+                        </div>
+
+                        <!-- Retirement Income Tax Assumptions -->
+                        <div class="p-3.5 bg-slate-50 rounded-xl border border-slate-200 space-y-3">
+                            <div class="text-xs font-bold text-slate-800 flex items-center gap-1.5"><i data-lucide="receipt-text" class="w-4 h-4 text-slate-600"></i> 은퇴 후 세후 소득 추정</div>
+                            <p class="text-[10px] text-slate-500 leading-relaxed">실제 세금은 과세표준·공제·다른 소득 등에 따라 달라집니다. 아래 세율은 은퇴소득의 세후 명목가치를 보기 위한 사용자 조정용 가정입니다.</p>
+                            <div class="grid grid-cols-3 gap-2">
+                                <div><label class="block text-[10px] font-semibold text-slate-600 mb-1">공적연금 세율</label><div class="relative"><input type="number" id="pensionTaxRate" value="5.0" step="0.1" min="0" max="50" oninput="calculateAll()" class="w-full px-2 py-1.5 pr-6 bg-white border border-slate-200 rounded-lg text-xs font-bold"><span class="absolute right-2 top-1.5 text-[10px] text-slate-400">%</span></div></div>
+                                <div><label class="block text-[10px] font-semibold text-slate-600 mb-1">배당 세율</label><div class="relative"><input type="number" id="dividendTaxRate" value="15.4" step="0.1" min="0" max="50" oninput="calculateAll()" class="w-full px-2 py-1.5 pr-6 bg-white border border-slate-200 rounded-lg text-xs font-bold"><span class="absolute right-2 top-1.5 text-[10px] text-slate-400">%</span></div></div>
+                                <div><label class="block text-[10px] font-semibold text-slate-600 mb-1">부동산 소득 세율</label><div class="relative"><input type="number" id="realEstateTaxRate" value="3.3" step="0.1" min="0" max="50" oninput="calculateAll()" class="w-full px-2 py-1.5 pr-6 bg-white border border-slate-200 rounded-lg text-xs font-bold"><span class="absolute right-2 top-1.5 text-[10px] text-slate-400">%</span></div></div>
+                            </div>
+                        </div>
+                </div>
+
+                <!-- TAB 2: Multi-Asset Accumulation Portfolio Selection -->
+                <div id="tab-portfolio" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+                    <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <h2 class="font-bold text-slate-900 flex items-center gap-2 text-sm">
+                            <i data-lucide="line-chart" class="w-4 h-4 text-indigo-600"></i>
+                            월 적립 상품 & 포트폴리오 비중
+                        </h2>
+                        <span class="text-xs text-slate-400">Step 2 / 4</span>
+                    </div>
+
+                    <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 text-xs text-indigo-950 space-y-2">
+                        <p class="font-semibold flex items-center gap-1">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-indigo-600"></i> 비중 합계 100% 자동 분배 지원
+                        </p>
+                        <p class="text-[11px] text-indigo-900 leading-relaxed">
+                            각 자산의 비중을 조정하면 합계가 정확히 <strong>100%</strong>가 되도록 다른 자산 비중이 자동 조절됩니다.
+                        </p>
+                        <div class="flex flex-wrap gap-x-4 gap-y-2 pt-1 border-t border-indigo-100">
+                            <label class="inline-flex items-center gap-1.5 text-[11px] font-bold cursor-pointer">
+                                <input type="checkbox" id="dividendReinvest" checked onchange="updatePortfolioDisplay();calculateAll()" class="accent-indigo-600 w-4 h-4">
+                                배당/분배금 재투자
+                            </label>
+                            <label class="inline-flex items-center gap-1.5 text-[11px] font-bold cursor-pointer">
+                                <input type="checkbox" id="feeApply" checked onchange="updatePortfolioDisplay();calculateAll()" class="accent-indigo-600 w-4 h-4">
+                                ETF 운용보수 반영
+                            </label>
+                        </div>
+                        <p class="text-[10px] text-indigo-800 leading-relaxed">
+                            기대수익률은 장기 시뮬레이션용 연 총수익률 가정입니다. 재투자 OFF 시 상품별 분배율을 제외하고, 보수 반영 ON 시 상품별 총보수를 차감합니다.
+                        </p>
+                    </div>
+
+                    <div class="space-y-3 pt-1">
+                        <!-- VOO -->
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                            <div class="flex justify-between items-center text-xs font-bold gap-2">
+                                <span class="flex items-center gap-1.5 text-slate-800"><span class="w-2.5 h-2.5 rounded-full bg-blue-600"></span>VOO · S&P 500</span>
+                                <span class="text-slate-500 font-normal">기대 <strong id="return-snp">9.0%</strong> · 분배 <strong>1.1%</strong> · 보수 <strong>0.03%</strong> · <span id="weight-snp" class="font-bold text-blue-600">40%</span></span>
+                            </div>
+                            <input type="range" id="slider-snp" min="0" max="100" step="1" value="40" oninput="onPortfolioSliderChange('snp')" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- QQQM -->
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                            <div class="flex justify-between items-center text-xs font-bold gap-2">
+                                <span class="flex items-center gap-1.5 text-slate-800"><span class="w-2.5 h-2.5 rounded-full bg-purple-600"></span>QQQM · NASDAQ 100</span>
+                                <span class="text-slate-500 font-normal">기대 <strong id="return-nasdaq">11.0%</strong> · 분배 <strong>0.6%</strong> · 보수 <strong>0.15%</strong> · <span id="weight-nasdaq" class="font-bold text-purple-600">25%</span></span>
+                            </div>
+                            <input type="range" id="slider-nasdaq" min="0" max="100" step="1" value="25" oninput="onPortfolioSliderChange('nasdaq')" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- SCHD -->
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                            <div class="flex justify-between items-center text-xs font-bold gap-2">
+                                <span class="flex items-center gap-1.5 text-slate-800"><span class="w-2.5 h-2.5 rounded-full bg-emerald-600"></span>SCHD · 미국배당다우존스</span>
+                                <span class="text-slate-500 font-normal">기대 <strong id="return-schd">8.0%</strong> · 분배 <strong>3.3%</strong> · 보수 <strong>0.06%</strong> · <span id="weight-schd" class="font-bold text-emerald-600">20%</span></span>
+                            </div>
+                            <input type="range" id="slider-schd" min="0" max="100" step="1" value="20" oninput="onPortfolioSliderChange('schd')" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- ACE KRX Gold -->
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                            <div class="flex justify-between items-center text-xs font-bold gap-2">
+                                <span class="flex items-center gap-1.5 text-slate-800"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>ACE KRX금현물</span>
+                                <span class="text-slate-500 font-normal">기대 <strong id="return-gold">6.5%</strong> · 분배 <strong>0.0%</strong> · 보수 <strong>0.19%</strong> · <span id="weight-gold" class="font-bold text-amber-600">10%</span></span>
+                            </div>
+                            <input type="range" id="slider-gold" min="0" max="100" step="1" value="10" oninput="onPortfolioSliderChange('gold')" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- Cash -->
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                            <div class="flex justify-between items-center text-xs font-bold gap-2">
+                                <span class="flex items-center gap-1.5 text-slate-800"><span class="w-2.5 h-2.5 rounded-full bg-slate-500"></span>예적금 / 국채 / 안전자산</span>
+                                <span class="text-slate-500 font-normal">기대 <strong id="return-cash">3.5%</strong> · <span id="weight-cash" class="font-bold text-slate-600">5%</span></span>
+                            </div>
+                            <input type="range" id="slider-cash" min="0" max="100" step="1" value="5" oninput="onPortfolioSliderChange('cash')" class="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <!-- Custom Return Asset -->
+                        <div class="p-3 bg-violet-50 rounded-xl border border-violet-200 space-y-2">
+                            <div class="flex justify-between items-center text-xs font-bold gap-2">
+                                <span class="flex items-center gap-1.5 text-violet-900"><span class="w-2.5 h-2.5 rounded-full bg-violet-600"></span>직접 입력 투자상품</span>
+                                <span class="text-slate-500 font-normal">비중 <strong id="weight-custom" class="font-bold text-violet-700">0%</strong></span>
+                            </div>
+                            <input type="range" id="slider-custom" min="0" max="100" step="1" value="0" oninput="onPortfolioSliderChange('custom')" class="w-full h-1.5 bg-violet-100 rounded-lg appearance-none cursor-pointer">
+                            <div class="grid grid-cols-2 gap-2">
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-violet-900 mb-1">목표 연수익률</label>
+                                    <div class="relative"><input type="number" id="customReturn" value="7.0" step="0.1" min="-20" max="50" oninput="updatePortfolioDisplay();calculateAll()" class="w-full px-2.5 py-1.5 pr-7 bg-white border border-violet-200 rounded-lg text-xs font-bold"><span class="absolute right-2 top-1.5 text-xs text-slate-400">%</span></div>
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] font-semibold text-violet-900 mb-1">배당/분배율</label>
+                                    <div class="relative"><input type="number" id="customDividendYield" value="0.0" step="0.1" min="0" max="20" oninput="updatePortfolioDisplay();calculateAll()" class="w-full px-2.5 py-1.5 pr-7 bg-white border border-violet-200 rounded-lg text-xs font-bold"><span class="absolute right-2 top-1.5 text-xs text-slate-400">%</span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="portfolioReturnNote" class="text-[10px] text-slate-500 bg-slate-50 p-2.5 rounded-lg border border-slate-200">보수 반영 및 배당재투자 설정에 따라 실효수익률이 자동 계산됩니다.</div>
+
+                    <!-- Computed Weighted Return Summary -->
+                    <div class="bg-slate-900 text-white p-4 rounded-xl shadow-sm flex items-center justify-between">
+                        <div>
+                            <div class="text-xs text-slate-400">실효 포트폴리오 연 수익률</div>
+                            <div class="text-xl font-extrabold text-amber-300" id="calcWeightedReturn">8.92%</div>
+                            <div class="text-[10px] text-slate-400 mt-1" id="portfolioEffectiveNote">재투자·보수 설정 반영값</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-[11px] text-slate-400">비중 합계</div>
+                            <div class="text-sm font-bold text-emerald-400" id="totalPortfolioWeight">100%</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 3: Real Estate Asset Evaluation -->
+                
+<input type="hidden" id="housingStatus" value="owner">
+<input type="hidden" id="homePurchaseAge" value="60">
+<input type="hidden" id="homePurchasePrice" value="50000">
+<input type="hidden" id="housingLoanEnabled" value="no">
+
+                <div id="tab-realestate" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+                    <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <h2 class="font-bold text-slate-900 flex items-center gap-2 text-sm">
+                            <i data-lucide="building" class="w-4 h-4 text-rose-600"></i>
+                            부동산 자산 평가 및 상승률
+                        </h2>
+                        <span class="text-xs text-slate-400">Step 3 / 4</span>
+                    </div>
+
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <label class="text-xs font-semibold text-slate-700">보유 부동산 현재 평가액</label>
+                            <span id="display-realEstateValue" class="text-xs font-bold text-rose-600">6억 0,000 만원</span>
+                        </div>
+                        <input type="range" id="realEstateValue" min="0" max="300000" step="1000" value="60000" oninput="syncRange('realEstateValue')" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        <p class="text-[11px] text-slate-400 mt-0.5">자차 아파트, 분양권, 주택 등 시세 평가액 (없을 경우 0원)</p>
+                    </div>
+
+                    <!-- Hierarchical Region Selection -->
+                    <div class="space-y-2">
+                        <label class="block text-xs font-semibold text-slate-700 mb-1.5">소재 지역 선택 (시·도 → 서울·경기도는 세부지역)</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <select id="realEstateRegion" onchange="onRealEstateRegionChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-rose-500">
+                                <option value="seoul" selected>서울특별시</option><option value="gyeonggi">경기도</option><option value="incheon">인천광역시</option><option value="busan">부산광역시</option><option value="daegu">대구광역시</option><option value="gwangju">광주광역시</option><option value="daejeon">대전광역시</option><option value="ulsan">울산광역시</option><option value="sejong">세종특별자치시</option><option value="rural">기타 지방</option>
+                            </select>
+                            <select id="realEstateDistrict" onchange="onRealEstateDistrictChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-rose-500"></select>
+                        </div>
+                        <p id="realEstateRegionHint" class="text-[11px] text-slate-400">서울·경기도를 선택하면 세부 지역별 상승률을 적용합니다.</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">부동산 연 예상 상승률 (%)</label>
+                            <input type="number" id="realEstateGrowthRate" value="6.0" step="0.1" min="0" max="15" oninput="calculateAll()" class="w-full px-2.5 py-1.5 bg-white border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-rose-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-semibold text-slate-600 mb-1">은퇴 시점 부동산 처리 방식</label>
+                            <select id="realEstateRetireAction" onchange="calculateAll()" class="w-full px-2 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold focus:ring-2 focus:ring-rose-500">
+                                <option value="hold" selected>계속 실거주 보유 (자산만 유지)</option>
+                                <option value="downsize">은퇴 시 매각/다운사이징 (50% 금융자산 전환)</option>
+                                <option value="rent">은퇴 후 월세/주택연금 전환 (월 소득화)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Conditional Rental Income setting -->
+                    <div id="rentalIncomePanel" class="hidden p-3 bg-rose-50 rounded-xl border border-rose-100 space-y-2">
+                        <div class="flex justify-between items-center text-xs font-bold text-rose-900">
+                            <span>은퇴 후 월세 / 주택연금 예상 수령액 (현재가치)</span>
+                            <span id="display-rentalIncome" class="text-rose-700">120 만원</span>
+                        </div>
+                        <input type="range" id="rentalIncome" min="10" max="500" step="10" value="120" oninput="syncRange('rentalIncome')" class="w-full h-1.5 bg-rose-200 rounded-lg appearance-none cursor-pointer">
+                    </div>
+                    <div id="housingLoanPanel" class="hidden p-3 bg-amber-50 rounded-xl border border-amber-200 space-y-3">
+                        <div>
+                            <div class="text-xs font-bold text-amber-900">아파트 매수 자금조달</div>
+                            <p class="text-[10px] text-amber-800 mt-1 leading-relaxed">무주택자가 아파트를 매수하면 자기자금은 현재 금융자산에서 차감합니다. 대출을 선택하면 월 원리금은 별도의 주거비 부담으로 반영하고, 대출 상환 중에도 유지할 월 적립액은 이용자가 정할 수 있습니다.</p>
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="setHousingLoanEnabled('no')" id="loan-btn-no" class="px-3 py-2 rounded-lg border border-amber-300 bg-amber-100 text-xs font-bold text-amber-900">대출 없이 매수</button>
+                            <button type="button" onclick="setHousingLoanEnabled('yes')" id="loan-btn-yes" class="px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600">대출 사용</button>
+                        </div>
+                        <div id="housingLoanInputs" class="hidden space-y-2">
+                            <div class="grid grid-cols-3 gap-2">
+                                <div><label class="block text-[10px] font-semibold text-slate-600 mb-1">대출 비율</label><div class="relative"><input type="number" id="housingLoanLTV" value="70" step="1" min="0" max="100" oninput="calculateAll()" class="w-full px-2.5 py-1.5 pr-7 bg-white border border-amber-200 rounded-lg text-xs font-bold"><span class="absolute right-2 top-1.5 text-[10px] text-slate-400">%</span></div></div>
+                                <div><label class="block text-[10px] font-semibold text-slate-600 mb-1">연 대출금리</label><div class="relative"><input type="number" id="housingLoanRate" value="4.0" step="0.1" min="0" max="15" oninput="calculateAll()" class="w-full px-2.5 py-1.5 pr-7 bg-white border border-amber-200 rounded-lg text-xs font-bold"><span class="absolute right-2 top-1.5 text-[10px] text-slate-400">%</span></div></div>
+                                <div><label class="block text-[10px] font-semibold text-slate-600 mb-1">상환 기간</label><div class="relative"><input type="number" id="housingLoanTerm" value="30" step="1" min="1" max="40" oninput="calculateAll()" class="w-full px-2.5 py-1.5 pr-7 bg-white border border-amber-200 rounded-lg text-xs font-bold"><span class="absolute right-2 top-1.5 text-[10px] text-slate-400">년</span></div></div>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-semibold text-slate-600 mb-1">대출 상환 중 월 적립액</label>
+                                <div class="relative"><input type="number" id="housingLoanMonthlySavings" value="150" step="1" min="0" max="5000" oninput="this.dataset.userSet='1'; calculateAll()" class="w-full px-2.5 py-1.5 pr-7 bg-white border border-amber-200 rounded-lg text-xs font-bold"><span class="absolute right-2 top-1.5 text-[10px] text-slate-400">만원</span></div>
+                                <p class="text-[10px] text-amber-700 mt-1">월급·생활비 등을 고려해 주담대를 갚으면서도 실제로 유지할 수 있다고 생각하는 금액을 입력하세요. 기본값은 현재 월 적립액입니다.</p>
+                            </div>
+                            <div id="housingLoanSummary" class="bg-white/80 rounded-lg border border-amber-100 px-2.5 py-2 text-[10px] text-amber-900 leading-relaxed"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- TAB 4: Public Pension Calculations with Detailed Gov Calculator -->
+                <div id="tab-pension" class="hidden bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-5">
+                    <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+                        <h2 class="font-bold text-slate-900 flex items-center gap-2 text-sm">
+                            <i data-lucide="landmark" class="w-4 h-4 text-emerald-600"></i>
+                            공적연금 상세 수령액 계산기
+                        </h2>
+                        <span class="text-xs text-slate-400">Step 4 / 4</span>
+                    </div>
+
+                    <!-- Pension Type Selector -->
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-2">공적연금 종류 선택</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" onclick="selectPensionType('national')" id="pensionType-national" class="p-2.5 rounded-xl border text-xs font-bold text-center transition border-blue-600 bg-blue-50 text-blue-700">
+                                국민연금 (일반 직장인/자영업)
+                            </button>
+                            <button type="button" onclick="selectPensionType('gov')" id="pensionType-gov" class="p-2.5 rounded-xl border text-xs font-bold text-center transition border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100">
+                                공무원/사학 연금 (정밀 계산)
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- National Pension Input Panel -->
+                    <div id="panel-national" class="space-y-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-xs font-semibold text-slate-700">본인 월 평균소득월액 (B값)</label>
+                                <span id="display-npsIncome" class="text-xs font-bold text-indigo-600">380 만원</span>
+                            </div>
+                            <input type="range" id="npsIncome" min="50" max="590" step="10" value="380" oninput="syncRange('npsIncome')" class="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer">
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">총 예상 가입 기간</label>
+                                <div class="relative">
+                                    <input type="number" id="npsYears" value="25" min="10" max="40" oninput="calculateAll()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500">
+                                    <span class="absolute right-3 top-2 text-xs text-slate-400">년</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">연금 개시 연령</label>
+                                <select id="npsStartAge" onchange="calculateAll()" class="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500">
+                                    <option value="60">60세 (조기 -30%)</option>
+                                    <option value="63">63세 (조기 -12%)</option>
+                                    <option value="65" selected>65세 (정상 수령)</option>
+                                    <option value="68">68세 (연기 +21.6%)</option>
+                                    <option value="70">70세 (연기 +36%)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Government / Teacher / Military Detailed Calculator Panel -->
+                    <div id="panel-gov" class="hidden space-y-4">
+                        
+                        <div class="bg-indigo-50/70 p-3 rounded-xl border border-indigo-100 text-xs text-indigo-950 space-y-1">
+                            <p class="font-bold flex items-center gap-1">
+                                <i data-lucide="award" class="w-4 h-4 text-indigo-600"></i> 직군·급수·호봉 체계 정밀 자동 산출
+                            </p>
+                            <p class="text-[11px] text-indigo-900 leading-relaxed">
+                                일반직(9~1급), 교원(1~40호봉), 경찰·소방, 군인 계급별 최고호봉 법정 규정을 정확히 반영한 봉급표 및 수당 통합 정밀 계산 시스템입니다.
+                            </p>
+                        </div>
+
+                        <!-- Job Group -->
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-700 mb-1">직군 선택</label>
+                            <select id="govJobGroup" onchange="onGovGroupChange()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+                                <option value="general" selected>일반직 공무원 (1급~9급 / 최대 31호봉)</option>
+                                <option value="teacher">교원 (유·초·중·고 교사 / 1호봉~40호봉 체계)</option>
+                                <option value="police">경찰 / 소방 공무원 (순경/소방사~총경/소방정)</option>
+                                <option value="military">군인 (부사관 및 장교 / 계급별 최고호봉 반영)</option>
+                            </select>
+                        </div>
+
+                        <!-- Rank & Salary Step -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1" id="govRankLabel">현재 계급 / 급수</label>
+                                <select id="govRank" onchange="onGovRankChange()" class="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+                                    <!-- Dynamic Options -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">현재 호봉</label>
+                                <select id="govStep" onchange="calculateGovIncome()" class="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-indigo-500">
+                                    <!-- Dynamic Options -->
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Years of Service & Retirement Start -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">기여금 납부 기간</label>
+                                <div class="relative">
+                                    <input type="number" id="govYears" value="30" min="10" max="36" oninput="calculateAll()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500">
+                                    <span class="absolute right-3 top-2 text-xs text-slate-400">년</span>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-700 mb-1">연평균 보수 인상률</label>
+                                <div class="relative">
+                                    <input type="number" id="govWageGrowth" value="2.5" step="0.1" min="0" max="8" oninput="calculateGovIncome()" class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500">
+                                    <span class="absolute right-3 top-2 text-xs text-slate-400">%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-emerald-50/70 p-3 rounded-xl border border-emerald-100 space-y-3">
+<div><div class="text-xs font-bold text-emerald-900">기준소득월액 자동 계산</div><div class="text-[10px] text-emerald-700 mt-0.5">기준소득월액을 직접 입력하지 않아도 직군·직급·호봉과 급여·수당 정보를 바탕으로 추정합니다.</div></div>
+<div id="govAutoInputs" class="p-3 bg-white/70 rounded-xl border border-emerald-100">
+  <p class="text-[11px] font-bold text-emerald-900">수당은 이용자가 직접 입력하지 않습니다.</p>
+  <p class="text-[10px] text-emerald-700 leading-relaxed mt-1">직군·직급·호봉을 바탕으로 일반적인 수당 수준을 자동 추정해 기준소득월액 계산에 반영합니다. 실제 개인별 수당과는 차이가 있을 수 있습니다.</p>
+</div>
+<input type="hidden" id="govTaxableAllowance" value="0">
+<input type="hidden" id="govAnnualBonus" value="0">
+<input type="hidden" id="govEightAvg" value="0">
+<input type="hidden" id="govAvgFactor" value="0.95">
+<input type="hidden" id="govAValue" value="595">
+<!-- Computed Government Pension Income Card -->
+                        <div class="p-3.5 bg-slate-900 text-white rounded-xl space-y-2">
+                            <div class="flex justify-between items-center text-xs">
+                                <span class="text-slate-400">2026 호봉 기본급:</span>
+                                <span class="font-bold text-amber-300 text-sm" id="calcGovBaseIncome">425 만원</span>
+                            </div>
+                            <div class="flex justify-between items-center text-xs pt-1 border-t border-slate-800">
+                                <span class="text-slate-400">예상 기준소득월액 / 평균기준소득월액:</span>
+                                <span class="font-bold text-emerald-400 text-sm" id="calcGovAvgIncome">510 만원</span>
+                            </div>
+                            <div id="govIncomeDetail" class="text-[10px] text-slate-400 pt-1">공단 산식 추정값</div>
+                            <div class="text-[10px] text-slate-400 pt-1">* 실제 기준소득월액은 전년도 과세소득과 직종·직급별 8개 수당 평균액으로 공단이 결정합니다.</div>
+                        </div>
+
+
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- Right Column: Summary KPI Cards, Interactive Charts & Analysis (7 cols on lg) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <!-- Top KPI Result Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    
+                    <!-- Card 1: Asset Preparation Status -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                        <div class="text-xs font-semibold text-slate-500 mb-1">은퇴 시점 예상 총 자산</div>
+                        <div class="text-xl sm:text-2xl font-extrabold text-slate-900" id="kpi-totalWealthAtRetire">0 원</div>
+                        <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between">
+                            <span>금융: <strong id="kpi-finWealthText">0억</strong></span>
+                            <span>부동산: <strong id="kpi-reWealthText">0억</strong></span>
+                        </div> 
+                        <div class="mt-1 text-[11px] text-amber-700">순자산: <strong id="kpi-netWealthAtRetire">0억</strong></div>
+                        <div class="absolute top-0 right-0 w-2 h-full bg-blue-600"></div>
+                    </div>
+
+                    <!-- Card 2: Income Coverage Ratio -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                        <div class="text-xs font-semibold text-slate-500 mb-1">은퇴 후 필요 생활비 충당률</div>
+                        <div class="text-xl sm:text-2xl font-extrabold text-blue-600 flex items-baseline gap-1" id="kpi-coverageRatio">
+                            0%
+                        </div>
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                            <div id="kpi-coverageBar" class="bg-blue-600 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                        <div class="mt-1.5 text-[11px] text-slate-500 flex justify-between">
+                            <span>목표: <span id="kpi-targetExpenseText">0만원/월</span></span>
+                            <span id="kpi-coverageStatus" class="font-bold text-emerald-600">양호</span>
+                        </div>
+                        <div class="absolute top-0 right-0 w-2 h-full bg-emerald-500"></div>
+                    </div>
+
+                    <!-- Card 3: Asset Depletion Age -->
+                    <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                        <div class="text-xs font-semibold text-slate-500 mb-1">자산 고갈 예상 시점</div>
+                        <div class="text-xl sm:text-2xl font-extrabold text-slate-900" id="kpi-depletionAge">90세 이상</div>
+                        <div class="mt-2 text-[11px] text-slate-500" id="kpi-depletionNote">
+                            기대수명까지 안정적 유지
+                        </div>
+                        <div class="absolute top-0 right-0 w-2 h-full bg-indigo-600"></div>
+                    </div>
+
+                </div>
+
+                <div id="housingPurchaseReport" class="hidden bg-white p-4 rounded-2xl border border-amber-200 shadow-sm">
+                    <div class="text-xs font-bold text-amber-700 mb-1">아파트 매수 자금 반영</div>
+                    <div id="housingPurchaseReportText" class="text-xs text-slate-600 leading-relaxed"></div>
+                </div>
+
+                <!-- Interactive Charts Panel -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+                    <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                        <h2 class="font-bold text-slate-900 text-base flex items-center gap-2">
+                            <i data-lucide="line-chart" class="w-5 h-5 text-blue-600"></i>
+                            자산 성장 및 소득 구성 시뮬레이션
+                        </h2>
+                        <div class="flex items-center gap-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                            <button onclick="toggleChartType('timeline')" id="btn-chart-timeline" class="px-3 py-1 rounded-lg bg-white text-blue-600 shadow-sm transition">
+                                자산 총액 변화
+                            </button>
+                            <button onclick="toggleChartType('breakdown')" id="btn-chart-breakdown" class="px-3 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition">
+                                은퇴 후 소득 출처
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Main Chart Canvas -->
+                    <div class="relative w-full h-[320px] sm:h-[360px]">
+                        <canvas id="mainChart"></canvas>
+                    </div>
+
+                    <div class="text-xs text-slate-500 bg-slate-50 p-3 rounded-xl flex items-start gap-2">
+                        <i data-lucide="lightbulb" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"></i>
+                        <span id="chartSummaryText">
+                            은퇴 전까지 금융/부동산 자산이 성장하며, 은퇴 후에는 공적연금 및 금융자산 인출액이 생활비를 안정적으로 충당합니다.
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Detailed Monthly Income Breakdown Table -->
+                <div class="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-4">
+                    <h3 class="font-bold text-slate-900 text-sm flex items-center gap-2 border-b border-slate-100 pb-2">
+                        <i data-lucide="pie-chart" class="w-4 h-4 text-emerald-600"></i>
+                        은퇴 후 (은퇴목표연령 기준) 월 소득 출처 상세 구성 · 세후 명목가치 포함
+                    </h3>
+
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead>
+                                <tr class="bg-slate-50 text-slate-500 border-b border-slate-200">
+                                    <th class="py-2.5 px-3">소득 항목</th>
+                                    <th class="py-2.5 px-3 text-right">현재 가치 기준</th>
+                                    <th class="py-2.5 px-3 text-right">은퇴시점 명목 가치(세전)</th>
+                                    <th class="py-2.5 px-3 text-right">세후 명목 가치</th>
+                                    <th class="py-2.5 px-3 text-right">비중 (%)</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100 font-medium">
+                                <tr>
+                                    <td class="py-2.5 px-3 flex items-center gap-2 text-slate-800">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-indigo-600"></span>
+                                        공적연금 (국민 / 공무원·사학)
+                                    </td>
+                                    <td class="py-2.5 px-3 text-right font-bold text-indigo-600" id="tbl-publicCurrent">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-600" id="tbl-publicFuture">0 만원</td><td class="py-2.5 px-3 text-right text-slate-700" id="tbl-publicNetFuture">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-500" id="tbl-publicRatio">0%</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-3 flex items-center gap-2 text-slate-800">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+                                        부동산 월세 / 주택연금
+                                    </td>
+                                    <td class="py-2.5 px-3 text-right font-bold text-rose-600" id="tbl-reCurrent">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-600" id="tbl-reFuture">0 만원</td><td class="py-2.5 px-3 text-right text-slate-700" id="tbl-reNetFuture">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-500" id="tbl-reRatio">0%</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-3 flex items-center gap-2 text-slate-800">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+                                        <span id="tbl-dividendLabel">배당금</span>
+                                    </td>
+                                    <td class="py-2.5 px-3 text-right font-bold text-amber-600" id="tbl-dividendCurrent">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-600" id="tbl-dividendFuture">0 만원</td><td class="py-2.5 px-3 text-right text-slate-700" id="tbl-dividendNetFuture">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-500" id="tbl-dividendRatio">0%</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2.5 px-3 flex items-center gap-2 text-slate-800">
+                                        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                                        <span id="tbl-drawdownLabel">생활비 부족분 원금 인출</span>
+                                    </td>
+                                    <td class="py-2.5 px-3 text-right font-bold text-blue-600" id="tbl-drawdownCurrent">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-600" id="tbl-drawdownFuture">0 만원</td><td class="py-2.5 px-3 text-right text-slate-700" id="tbl-drawdownNetFuture">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-500" id="tbl-drawdownRatio">0%</td>
+                                </tr>
+                                <tr class="bg-slate-50 font-bold text-slate-900 border-t border-slate-200">
+                                    <td class="py-2.5 px-3">은퇴 소득 총합계</td>
+                                    <td class="py-2.5 px-3 text-right text-blue-700" id="tbl-totalCurrent">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right text-slate-800" id="tbl-totalFuture">0 만원</td><td class="py-2.5 px-3 text-right text-slate-800" id="tbl-totalNetFuture">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right">100%</td>
+                                </tr>
+                                <tr id="tbl-gapRow" class="bg-red-50 text-red-700 font-bold">
+                                    <td class="py-2.5 px-3">목표 대비 부족/여유액</td>
+                                    <td class="py-2.5 px-3 text-right" id="tbl-gapCurrent">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right" id="tbl-gapFuture">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right" id="tbl-gapNetFuture">0 만원</td>
+                                    <td class="py-2.5 px-3 text-right" id="tbl-gapBadge">부족</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Custom Insights Card -->
+                <div class="bg-slate-900 text-white rounded-2xl p-5 shadow-lg space-y-3">
+                    <div class="flex items-center space-x-2 text-amber-400 font-bold text-sm">
+                        <i data-lucide="compass" class="w-5 h-5"></i>
+                        <span>포트폴리오 & 부동산 통합 진단 리포트</span>
+                    </div>
+                    <div id="aiRecommendationText" class="text-xs text-slate-300 leading-relaxed space-y-2">
+                        <!-- Dynamic text injected by JS -->
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Footer Section -->
+    <footer class="bg-white border-t border-slate-200 py-6 mt-12 no-print">
+        <div class="max-w-7xl mx-auto px-4 text-center text-xs text-slate-500 space-y-2">
+            <p class="font-semibold text-slate-600">은퇴 자산 & 공적연금 통합 시뮬레이터</p>
+            <p>본 시뮬레이션은 2026년 제도·봉급표를 참고한 추정 모델입니다. 금융자산 수익률은 장기 역사적 참고값이며 미래 수익을 보장하지 않습니다. 배당형 전환 비율·배당률과 생활비에 따라 결과가 크게 달라질 수 있습니다.</p>
+            <p class="text-slate-400">© 2026 Retirement Asset Planner. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // 사용자 지정 보수적 장기 기대수익률(연). 수익률은 미래 보장이 아닌 시뮬레이션 가정입니다.
+        // 배당/분배금 재투자 ON: 입력한 총수익률 가정 사용. OFF: 아래 추정 분배율을 제외.
+        const ASSET_CAGR={snp:9.0,nasdaq:11.0,schd:8.0,gold:6.5,cash:3.5,custom:7.0};
+        const ASSET_DIVIDEND_YIELD={snp:1.1,nasdaq:0.6,schd:3.3,gold:0.0,cash:0.0};
+        const ASSET_FEE={snp:0.03,nasdaq:0.15,schd:0.06,gold:0.19,cash:0.0};
+        const SEOUL_DISTRICTS={seoul:'서울 전체',gangnam:'강남구',seocho:'서초구',songpa:'송파구',yongsan:'용산구',seongdong:'성동구',mapo:'마포구',yeongdeungpo:'영등포구',yangcheon:'양천구',gwangjin:'광진구',gangdong:'강동구',dongjak:'동작구',jung:'중구',jongno:'종로구',seodaemun:'서대문구',eunpyeong:'은평구',seongbuk:'성북구',dongdaemun:'동대문구',jungnang:'중랑구',nowon:'노원구',dobong:'도봉구',gangbuk:'강북구',gwanak:'관악구',guro:'구로구',geumcheon:'금천구'};
+const RE_REGION_CAGR={seoul:4.8,gyeonggi:3.3,incheon:3.3,busan:2.7,daegu:2.4,gwangju:2.6,daejeon:2.8,ulsan:2.5,sejong:3.0,rural:1.8};
+// 경기도 시·군별 장기 시뮬레이션 가정값(%). KB부동산의 지역별 장기 흐름을 참고한 보수적 가정이며 미래 수익률을 보장하지 않습니다.
+const GYEONGGI_DISTRICTS={
+  suwon:'수원시',seongnam:'성남시',goyang:'고양시',yongin:'용인시',bucheon:'부천시',ansan:'안산시',anyang:'안양시',namyangju:'남양주시',hwaseong:'화성시',pyeongtaek:'평택시',uijeongbu:'의정부시',siheung:'시흥시',paju:'파주시',gimpo:'김포시',gwangmyeong:'광명시',gwangju_gyeonggi:'광주시',gunpo:'군포시',hanam:'하남시',osan:'오산시',icheon:'이천시',yangju:'양주시',anseong:'안성시',guri:'구리시',uigu:'의왕시',pocheon:'포천시',yangpyeong:'양평군',yeoncheon:'연천군',gapyeong:'가평군',yeoju:'여주시',dongducheon:'동두천시',gwacheon:'과천시'
+};
+const RE_GYEONGGI_CAGR={suwon:3.8,seongnam:6.0,goyang:3.2,yongin:4.0,bucheon:4.5,ansan:2.7,anyang:3.6,namyangju:3.5,hwaseong:4.3,pyeongtaek:2.6,uijeongbu:2.7,siheung:2.8,paju:2.7,gwangju:3.0,gimpo:3.5,gwangmyeong:5.0,gunpo:3.4,hanam:4.8,osan:3.2,icheon:2.2,yangju:2.5,anseong:2.4,guri:3.8,uigu:4.0,pocheon:1.8,yangpyeong:2.5,yeoncheon:1.5,gapyeong:2.2,yeoju:2.2,dongducheon:1.7,gwacheon:5.9};
+const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seongdong:6.0,mapo:5.8,yeongdeungpo:5.7,yangcheon:5.6,gwangjin:5.4,gangdong:5.2,dongjak:5.1,jung:5.0,jongno:4.9,seodaemun:4.8,eunpyeong:4.7,seongbuk:4.5,dongdaemun:4.5,jungnang:4.3,nowon:4.1,dobong:3.9,gangbuk:3.8,gwanak:4.4,guro:4.3,geumcheon:4.2};
+        // 2026 인사혁신처 봉급표 기반(만원). 원자료의 호봉별 금액을 그대로 사용.
+        const SALARY_2026={
+          teacher:[204.15,210.33,216.60,222.85,229.15,235.44,241.66,247.86,249.56,251.67,253.83,258.59,265.75,277.37,288.97,300.62,312.10,324.15,336.12,348.10,360.07,373.36,386.53,399.75,412.94,426.19,440.01,453.80,468.21,482.68,497.11,511.52,526.16,540.75,555.36,569.91,582.57,595.25,607.95,620.57],
+          general:{'9급':[213.30,214.76,216.80,219.40,222.61,226.46,230.99,236.75,245.67,254.27,262.44,270.59,278.39,285.98,293.23,300.23,307.08,313.45,319.73,325.70,331.34,336.76,341.92,346.88,351.60,355.87,359.56,363.10,366.51,369.84,373.11],'8급':[216.21,219.57,223.38,227.66,233.17,241.29,251.96,262.24,272.03,281.30,290.27,299.03,307.45,315.51,323.24,330.71,337.68,344.43,350.93,357.11,363.02,368.69,374.08,379.29,384.23,390.30,393.02,396.87,400.51,404.03,407.46],'7급':[231.71,236.79,242.38,248.52,256.71,268.26,279.87,291.58,302.71,313.33,323.34,333.19,342.53,351.45,359.99,368.06,375.81,383.21,390.20,396.84,403.18,409.16,414.96,420.45,425.65,434.79,438.80,443.11,445.61,446.24,449.65],'6급':[238.95,250.07,261.52,273.24,285.31,297.71,310.15,322.62,335.13,346.87,358.00,368.96,379.27,389.00,398.36,407.13,415.49,423.41,430.91,437.96,444.76,451.15,457.13,462.85,468.28,473.41,478.28,482.37,486.19,489.98,493.48],'5급':[289.64,301.34,313.50,326.13,339.09,352.30,365.73,379.32,392.96,406.68,419.53,431.90,443.64,454.59,464.94,474.68,483.84,492.48,500.63,508.27,515.45,522.20,528.56,534.52,540.15,545.45,549.84,554.07,557.95,561.72],'4급':[324.12,337.35,350.80,364.57,378.52,392.62,406.83,421.11,435.45,449.77,464.21,477.81,490.51,502.38,513.55,524.09,533.87,543.01,551.55,559.53,566.98,573.97,580.54,586.73,592.38,597.18,601.59,605.83],'3급':[378.17,392.16,406.57,421.08,435.83,450.72,465.80,480.90,496.14,511.36,526.62,542.42,557.12,570.76,583.34,595.05,606.07,616.07,625.43,634.21,642.33,649.85,656.78,663.28],'2급':[419.16,434.71,450.47,466.37,482.51,498.65,515.02,531.36,547.82,564.25,580.77,597.86,615.05,630.62,644.96,658.10,670.20,681.27,691.49,700.81,709.34,717.16],'1급':[465.61,481.93,498.66,515.77,533.30,551.04,569.04,587.19,605.61,624.13,642.60,661.71,680.92,700.18,717.01,731.96,745.21,757.01,767.58,777.06,785.78,793.56,800.14]},
+          military:{'하사':[213.30,215.43,217.56,219.69,221.82,224.91,228.00,231.09,234.18,237.27],'중사':[218.15,225.20,232.25,239.30,246.35,253.40,260.45,270.69,280.93,291.17,301.41,311.65,321.89,332.13,342.37,352.61,362.85,373.09,383.33,393.57,403.81,414.05],'상사':[246.80,257.75,268.70,279.65,290.60,301.55,312.50,323.45,334.40,345.35,356.30,367.25,378.20,389.15,400.10,411.05,422.00,432.95,443.90],'원사':[356.81,368.21,379.61,391.01,402.41,413.81,425.21,436.61,448.01,459.41,470.81,482.21,493.61,505.01,516.41],'준위':[254.43,266.54,278.65,290.76,302.87,314.98,327.09,339.20,351.31,363.42,375.53,387.64,399.75,411.86,423.97,436.08,448.19,460.30,472.41,484.52,496.63,508.74,520.85,532.96,545.07,557.18,569.29],'소위':[215.04,224.04,233.04],'중위':[230.67,238.50,246.33,254.16,261.99,274.13,286.27],'대위':[280.50,292.29,304.08,318.54,333.00,347.46,361.92,376.38,390.84,405.30,419.76,434.22],'소령':[338.27,353.60,368.93,384.26,399.59,414.92,430.25,445.58,460.91,476.24,491.57,506.90,522.23,537.56,552.89],'중령':[410.58,426.28,441.98,457.68,473.38,489.08,504.78,520.48,536.18,551.88,567.58,583.28,598.98,614.68,630.38],'대령':[467.12,482.83,498.54,514.25,529.96,545.67,561.38,577.09,592.80,608.51,624.22,639.93,655.64,671.35,687.06]}
+        };
+        const GOV_RANK_CONFIG={general:{ranks:['9급','8급','7급','6급','5급','4급','3급','2급','1급'],defaultRank:'7급',defaultStep:8,maxSteps:{'9급':31,'8급':31,'7급':31,'6급':31,'5급':30,'4급':28,'3급':24,'2급':22,'1급':23}},teacher:{ranks:['유·초·중·고 교원 (1~40호봉)'],defaultRank:'유·초·중·고 교원 (1~40호봉)',defaultStep:9,maxSteps:{'유·초·중·고 교원 (1~40호봉)':40}},police:{ranks:['순경/소방사','경장/소방교','경사/소방장','경위/소방위','경감/소방경','경정/소방령','총경/소방정'],defaultRank:'경사/소방장',defaultStep:10,maxSteps:{'순경/소방사':31,'경장/소방교':31,'경사/소방장':31,'경위/소방위':31,'경감/소방경':31,'경정/소방령':32,'총경/소방정':30}},military:{ranks:['하사','중사','상사','원사','준위','소위','중위','대위','소령','중령','대령'],defaultRank:'상사',defaultStep:12,maxSteps:{'하사':10,'중사':22,'상사':19,'원사':15,'준위':27,'소위':3,'중위':7,'대위':12,'소령':15,'중령':15,'대령':15}}};
+        // Global State
+        let pensionType = 'national'; // 'national' | 'gov'
+        let activeChartType = 'timeline'; // 'timeline' | 'breakdown'
+        let mainChart = null;
+
+        let portfolioWeights = {
+            snp: 40,
+            nasdaq: 25,
+            schd: 20,
+            gold: 10,
+            cash: 5,
+            custom: 0
+        };
+
+        const inputs = {};
+
+        // On Load Initializer
+        window.onload = function() {
+            lucide.createIcons();
+            initInputs();
+            populateRealEstateDistricts();
+            onRealEstateDistrictChange();
+            onGovGroupChange();
+            updatePortfolioDisplay();
+            calculateAll();
+        };
+
+        function initInputs() {
+            const ids = [
+                'currentAge', 'retireAge', 'lifeExpectancy', 'currentAssets', 'monthlySavings',
+                'targetMonthlyExpense', 'inflationRate', 'realEstateValue', 'realEstateRegion', 'realEstateDistrict',
+                'realEstateGrowthRate', 'realEstateRetireAction', 'rentalIncome', 'housingStatus', 'homePurchaseAge', 'homePurchasePrice', 'housingLoanEnabled', 'housingLoanLTV', 'housingLoanRate', 'housingLoanTerm', 'housingLoanMonthlySavings', 'npsIncome',
+                'npsYears', 'npsStartAge', 'govJobGroup', 'govRank', 'govStep',
+                'govYears', 'govWageGrowth', 'govTaxableAllowance', 'govAnnualBonus', 'govEightAvg', 'govAvgFactor', 'govAValue', 'dividendMode', 'dividendYield', 'dividendAllocation', 'dividendReinvest', 'feeApply', 'customReturn', 'customDividendYield', 'pensionTaxRate', 'dividendTaxRate', 'realEstateTaxRate'
+            ];
+            ids.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) inputs[id] = el;
+            });
+        }
+
+        function switchTab(tab) {
+            ['basic', 'portfolio', 'realestate', 'pension'].forEach(t => {
+                const tabEl = document.getElementById(`tab-${t}`);
+                const btnEl = document.getElementById(`tab-btn-${t}`);
+                if (t === tab) {
+                    tabEl.classList.remove('hidden');
+                    btnEl.className = "flex-1 py-2 text-xs font-bold rounded-xl transition bg-blue-600 text-white shadow-sm flex items-center justify-center gap-1";
+                } else {
+                    tabEl.classList.add('hidden');
+                    btnEl.className = "flex-1 py-2 text-xs font-bold rounded-xl transition text-slate-600 hover:text-slate-900 hover:bg-slate-100 flex items-center justify-center gap-1";
+                }
+            });
+        }
+
+        function getPortfolioRawReturn(k){
+            if(k==='custom') return Math.max(-100, parseFloat(document.getElementById('customReturn')?.value) || ASSET_CAGR.custom);
+            return ASSET_CAGR[k];
+        }
+        function getPortfolioEffectiveReturn(k){
+            let r=getPortfolioRawReturn(k);
+            const reinvest=document.getElementById('dividendReinvest')?.checked ?? true;
+            const feeOn=document.getElementById('feeApply')?.checked ?? true;
+            if(!reinvest){
+                const y=k==='custom' ? (parseFloat(document.getElementById('customDividendYield')?.value)||0) : (ASSET_DIVIDEND_YIELD[k]||0);
+                r-=y;
+            }
+            if(feeOn) r-=(k==='custom'?0:(ASSET_FEE[k]||0));
+            return r;
+        }
+        function onPortfolioSliderChange(changedKey) {
+            const keys = ['snp','nasdaq','schd','gold','cash','custom'];
+            let newValue = Math.max(0, Math.min(100, parseInt(document.getElementById(`slider-${changedKey}`).value)||0));
+            portfolioWeights[changedKey] = newValue;
+            const otherKeys = keys.filter(k => k !== changedKey);
+            const otherSum = otherKeys.reduce((acc,k)=>acc+(portfolioWeights[k]||0),0);
+            const remaining = 100-newValue;
+            if(remaining<=0){ otherKeys.forEach(k=>portfolioWeights[k]=0); }
+            else if(otherSum===0){
+                const base=Math.floor(remaining/otherKeys.length), rem=remaining-base*otherKeys.length;
+                otherKeys.forEach((k,i)=>portfolioWeights[k]=base+(i===0?rem:0));
+            } else {
+                let temp=0;
+                otherKeys.forEach((k,i)=>{
+                    if(i===otherKeys.length-1) portfolioWeights[k]=Math.max(0,remaining-temp);
+                    else { const v=Math.max(0,Math.round((portfolioWeights[k]/otherSum)*remaining)); portfolioWeights[k]=v; temp+=v; }
+                });
+            }
+            keys.forEach(k=>{ const el=document.getElementById(`slider-${k}`); if(el) el.value=portfolioWeights[k]; });
+            updatePortfolioDisplay(); calculateAll();
+        }
+        function updatePortfolioDisplay() {
+            const keys=['snp','nasdaq','schd','gold','cash','custom']; let total=0; let weighted=0;
+            keys.forEach(k=>{ const w=portfolioWeights[k]||0; total+=w; weighted+=w*getPortfolioEffectiveReturn(k); const el=document.getElementById(`weight-${k}`); if(el) el.innerText=`${w}%`; });
+            document.getElementById('totalPortfolioWeight').innerText=`${total}%`;
+            const effective=weighted/100;
+            document.getElementById('calcWeightedReturn').innerText=`${effective.toFixed(2)}%`; const note=document.getElementById('portfolioEffectiveNote'); if(note) note.innerText=`배당 재투자 ${document.getElementById('dividendReinvest')?.checked?'ON':'OFF'} · 보수 반영 ${document.getElementById('feeApply')?.checked?'ON':'OFF'}`;
+            const map={snp:'return-snp',nasdaq:'return-nasdaq',schd:'return-schd',gold:'return-gold',cash:'return-cash'};
+            Object.entries(map).forEach(([k,id])=>{const el=document.getElementById(id); if(el) el.innerText=`${getPortfolioEffectiveReturn(k).toFixed(2)}%`;});
+        }
+
+        function populateRealEstateDistricts(){
+            const regionEl=document.getElementById('realEstateRegion');
+            const districtEl=document.getElementById('realEstateDistrict');
+            const hintEl=document.getElementById('realEstateRegionHint');
+            if(!regionEl || !districtEl) return;
+            const region=regionEl.value;
+            const previous=districtEl.value;
+            districtEl.innerHTML='';
+            let source=null;
+            if(region==='seoul') source=SEOUL_DISTRICTS;
+            else if(region==='gyeonggi') source=GYEONGGI_DISTRICTS;
+            if(source){
+                Object.entries(source).forEach(([key,label])=>{
+                    const opt=document.createElement('option'); opt.value=key; opt.textContent=label;
+                    districtEl.appendChild(opt);
+                });
+                districtEl.disabled=false;
+                if(source[previous]) districtEl.value=previous;
+                if(hintEl) hintEl.textContent=region==='seoul'?'서울특별시 25개 자치구별 장기 상승률 가정을 적용합니다.':'경기도 31개 시·군별 장기 상승률 가정을 적용합니다.';
+            }else{
+                const opt=document.createElement('option'); opt.value='all'; opt.textContent='해당 지역 전체'; districtEl.appendChild(opt);
+                districtEl.disabled=true;
+                if(hintEl) hintEl.textContent='선택한 시·도의 장기 상승률 가정을 적용합니다.';
+            }
+        }
+
+        function syncFutureHomeRegionFields(){
+    // 무주택자 매수 시에는 기존 부동산 지역 선택값을 그대로 사용합니다.
+    // 이전 버전의 별도 homePurchase* 필드는 더 이상 필요하지 않으며,
+    // 존재할 경우에만 호환용으로 동기화합니다.
+    const hs=el('housingStatus')?.value||'owner';
+    if(hs!=='none') return;
+    const r=el('realEstateRegion'), d=el('realEstateDistrict'), g=el('realEstateGrowthRate');
+    const pr=el('homePurchaseRegion'), pd=el('homePurchaseDistrict'), pg=el('homePurchaseGrowthRate');
+    if(pr && r) pr.value=r.value;
+    if(pd && d) pd.value=d.value;
+    if(pg && g) pg.value=g.value;
+  }
+
+  function onRealEstateRegionChange(){populateRealEstateDistricts();onRealEstateDistrictChange();}
+        function onRealEstateDistrictChange(){
+            const r=inputs.realEstateRegion.value;
+            const d=document.getElementById('realEstateDistrict').value||'seoul';
+            let rate=RE_REGION_CAGR[r]||1.8;
+            if(r==='seoul') rate=RE_SEOUL_CAGR[d]||4.8;
+            else if(r==='gyeonggi') rate=RE_GYEONGGI_CAGR[d]||RE_REGION_CAGR.gyeonggi;
+            inputs.realEstateGrowthRate.value=rate;
+            calculateAll();
+        }
+
+        function onGovGroupChange(){const group=inputs.govJobGroup?.value||'general';const config=GOV_RANK_CONFIG[group]||GOV_RANK_CONFIG.general;const rankSelect=inputs.govRank;document.getElementById('govRankLabel').innerText=group==='teacher'?'구분':'현재 계급 / 급수';rankSelect.innerHTML='';config.ranks.forEach(r=>{const o=document.createElement('option');o.value=r;o.innerText=r;o.selected=r===config.defaultRank;rankSelect.appendChild(o)});onGovRankChange()}
+        function onGovRankChange(){
+            const group=inputs.govJobGroup?.value||'general';
+            const rank=inputs.govRank?.value||'7급';
+            const max=GOV_RANK_CONFIG[group]?.maxSteps?.[rank]||31;
+            const sel=inputs.govStep;
+            if(!sel) return;
+            const oldStep=parseInt(sel.value)||GOV_RANK_CONFIG[group]?.defaultStep||1;
+            sel.innerHTML='';
+            for(let i=1;i<=max;i++){
+                const o=document.createElement('option');
+                o.value=i;
+                o.innerText=`${i}호봉`;
+                o.selected=(i===Math.min(oldStep,max));
+                sel.appendChild(o);
+            }
+            calculateGovIncome();
+        }
+        function getBasePay(group,rank,step){if(group==='teacher')return SALARY_2026.teacher[step-1]||0;if(group==='general')return SALARY_2026.general[rank]?.[step-1]||0;if(group==='military')return SALARY_2026.military[rank]?.[step-1]||0;const map={'순경/소방사':'9급','경장/소방교':'8급','경사/소방장':'7급','경위/소방위':'6급','경감/소방경':'5급','경정/소방령':'4급','총경/소방정':'3급'};return SALARY_2026.general[map[rank]||'7급']?.[Math.min(step,31)-1]||0}
+        function estimateGovAllowances(group, rank, base){
+            // 이용자가 수당을 직접 알 필요가 없도록 직군·직급·기본급을 기준으로 평균적인 수준을 추정합니다.
+            const groupFactor = {
+                general: 1.00,
+                teacher: 0.95,
+                police: 1.08,
+                military: 1.12
+            }[group] || 1.00;
+            const rankText = String(rank||'');
+            let rankFactor = 1.00;
+            if(/^[1-3]급$/.test(rankText)) rankFactor=1.15;
+            else if(/^[4-5]급$/.test(rankText)) rankFactor=1.10;
+            else if(/^[6-7]급$/.test(rankText)) rankFactor=1.04;
+            else if(/^[8-9]급$/.test(rankText)) rankFactor=1.00;
+            else if(/교감|교장/.test(rankText)) rankFactor=1.15;
+            else if(/순경|소방사|하사|중사/.test(rankText)) rankFactor=1.00;
+            else if(/경장|소방교|상사|원사/.test(rankText)) rankFactor=1.05;
+            else if(/경사|소방장|준위|소위|중위/.test(rankText)) rankFactor=1.08;
+            else if(/경위|소방위|대위|소령/.test(rankText)) rankFactor=1.12;
+            else if(/경감|소방경|중령|대령/.test(rankText)) rankFactor=1.16;
+            else if(/경정|소방령|장군/.test(rankText)) rankFactor=1.20;
+            const factor=groupFactor*rankFactor;
+            return {
+                fixedMonthly: base*0.10*factor,
+                personal8: base*1.35*factor,
+                avg8: base*1.55*factor
+            };
+        }
+
+        function calculateGovIncome(){
+            const group=inputs.govJobGroup?.value||'general', rank=inputs.govRank?.value||'7급', step=parseInt(inputs.govStep?.value)||8;
+            const base=getBasePay(group,rank,step);
+            const estimated=estimateGovAllowances(group,rank,base);
+            const fixedMonthly=estimated.fixedMonthly;
+            const personal8=estimated.personal8;
+            const avg8=estimated.avg8;
+            // 계산용 hidden 값도 함께 갱신해 다른 계산 로직과 일관되게 유지합니다.
+            if(inputs.govTaxableAllowance) inputs.govTaxableAllowance.value=fixedMonthly.toFixed(2);
+            if(inputs.govAnnualBonus) inputs.govAnnualBonus.value=personal8.toFixed(2);
+            if(inputs.govEightAvg) inputs.govEightAvg.value=avg8.toFixed(2);
+            const wage=(parseFloat(inputs.govWageGrowth?.value)||2.5)/100;
+            const B=((base+fixedMonthly)*12-personal8+avg8)/12*(1+wage);
+            const years=Math.min(parseFloat(inputs.govYears?.value)||30,36);
+            const avgFactor=years>1?((Math.pow(1+wage,years)-1)/(years*wage||1)):1;
+            const avg=B*avgFactor;
+            const A=595;
+            const outBase=document.getElementById('calcGovBaseIncome'), outAvg=document.getElementById('calcGovAvgIncome');
+            if(outBase) outBase.innerText=`${base.toFixed(2)} 만원`;
+            if(outAvg) outAvg.innerText=`${avg.toFixed(2)} 만원`;
+            const d=document.getElementById('govIncomeDetail');
+            if(d)d.innerHTML=`직군·직급·호봉 기반 자동 추정: 월 고정 과세소득 약 ${fixedMonthly.toFixed(1)}만원 · 8개 수당 개인 추정 연 ${personal8.toFixed(0)}만원 · 직종·직급 평균 추정 연 ${avg8.toFixed(0)}만원 → 현재 ${B.toFixed(2)}만원 · 기여금 납부기간 기준 평균 ${avg.toFixed(2)}만원`;
+            calculateAll();
+        }
+
+
+        function selectPensionType(type) {
+            pensionType = type;
+            const btnNat = document.getElementById('pensionType-national');
+            const btnGov = document.getElementById('pensionType-gov');
+            const panelNat = document.getElementById('panel-national');
+            const panelGov = document.getElementById('panel-gov');
+
+            if (type === 'national') {
+                btnNat.className = "p-2.5 rounded-xl border text-xs font-bold text-center transition border-blue-600 bg-blue-50 text-blue-700";
+                btnGov.className = "p-2.5 rounded-xl border text-xs font-bold text-center transition border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100";
+                panelNat.classList.remove('hidden');
+                panelGov.classList.add('hidden');
+            } else {
+                btnGov.className = "p-2.5 rounded-xl border text-xs font-bold text-center transition border-indigo-600 bg-indigo-50 text-indigo-700";
+                btnNat.className = "p-2.5 rounded-xl border text-xs font-bold text-center transition border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100";
+                panelNat.classList.add('hidden');
+                panelGov.classList.remove('hidden');
+            }
+
+            calculateAll();
+        }
+
+        function syncRange(id) {
+            const val = parseFloat(document.getElementById(id).value);
+            const display = document.getElementById(`display-${id}`);
+            if (display) {
+                display.innerText = formatMoney(val);
+            }
+            calculateAll();
+        }
+
+        function formatMoney(valueInTenThousand) {
+            if (valueInTenThousand >= 10000) {
+                const uk = Math.floor(valueInTenThousand / 10000);
+                const remainder = Math.round(valueInTenThousand % 10000);
+                if (remainder === 0) {
+                    return `${uk}억원`;
+                } else {
+                    return `${uk}억 ${remainder.toLocaleString()}만원`;
+                }
+            } else {
+                return `${Math.round(valueInTenThousand).toLocaleString()}만원`;
+            }
+        }
+
+        function calculatePublicPension() {
+            let monthlyPension = 0;
+
+            if (pensionType === 'national') {
+                const B = parseFloat(inputs.npsIncome.value); 
+                const N = parseFloat(inputs.npsYears.value);   
+                const startAge = parseInt(inputs.npsStartAge.value);
+
+                const A = 300; 
+                const boundedB = Math.min(Math.max(B, 39), 590);
+
+                let baseAnnual = 0;
+                if (N >= 20) {
+                    baseAnnual = 1.2 * (A + boundedB) * (1 + 0.05 * (N - 20));
+                } else {
+                    baseAnnual = 1.2 * (A + boundedB) * (N / 20);
+                }
+
+                monthlyPension = baseAnnual / 12;
+
+                if (startAge < 65) {
+                    monthlyPension *= (1 - ((65 - startAge) * 0.06)); 
+                } else if (startAge > 65) {
+                    monthlyPension *= (1 + ((startAge - 65) * 0.072)); 
+                }
+            } else {
+                const B=parseFloat((document.getElementById('calcGovAvgIncome').innerText||'450').replace(/[^0-9.]/g,''))||450;
+                const A=parseFloat(document.getElementById('govAValue')?.value)||595;
+                const N=Math.min(parseFloat(inputs.govYears.value)||0,36);
+                const rate=0.01736;
+                const table=[[0.3,3],[0.4,2.1667],[0.5,1.75],[0.6,1.5],[0.7,1.3333],[0.8,1.2143],[0.9,1.125],[1.0,1.0556],[1.1,1.0],[1.2,0.9545],[1.3,0.9167],[1.4,0.8846],[1.5,0.8571],[1.6,0.8333],[Infinity,0.8125]];
+                const ratio=A?B/A:1; let f=0.8125; for(const [limit,v] of table){if(ratio<limit){f=v;break}}
+                monthlyPension=B*(rate-0.01)*N+(B*f)*0.01*Math.min(N,30);
+            }
+
+            return Math.max(0, monthlyPension);
+        }
+
+        // Main Simulation Engine
+        function calculateAll() {
+            const currentAge=parseInt(inputs.currentAge.value)||38;
+            const retireAge=parseInt(inputs.retireAge.value)||60;
+            const lifeExpectancy=parseInt(inputs.lifeExpectancy.value)||90;
+            const currentFinAssets=Math.max(0,parseFloat(inputs.currentAssets.value)||0);
+            const monthlySavings=Math.max(0,parseFloat(inputs.monthlySavings.value)||0);
+            const loanSavingsEl=document.getElementById('housingLoanMonthlySavings');
+            if(loanSavingsEl && (!loanSavingsEl.value || loanSavingsEl.dataset.userSet!=='1')) loanSavingsEl.value=monthlySavings;
+            const targetExpenseCurrent=Math.max(0,parseFloat(inputs.targetMonthlyExpense.value)||300);
+            const inflationRate=(parseFloat(inputs.inflationRate.value)||2.3)/100;
+            const weightedAnnualReturn=parseFloat(document.getElementById('calcWeightedReturn').innerText)/100||0;
+            const housingStatus=document.getElementById('housingStatus')?.value||'owner';
+            const homePurchaseAge=Math.max(currentAge,parseInt(document.getElementById('homePurchaseAge')?.value)||currentAge);
+            const homePurchasePriceCurrent=Math.max(0,parseFloat(document.getElementById('homePurchasePrice')?.value)||0);
+            const housingLoanEnabled=housingStatus==='none' && (document.getElementById('housingLoanEnabled')?.value||'no')==='yes';
+            const housingLoanLTV=Math.min(100,Math.max(0,parseFloat(document.getElementById('housingLoanLTV')?.value)||0))/100;
+            const housingLoanRate=Math.min(30,Math.max(0,parseFloat(document.getElementById('housingLoanRate')?.value)||0))/100;
+            const housingLoanTerm=Math.max(1,Math.min(40,parseFloat(document.getElementById('housingLoanTerm')?.value)||30));
+            const housingLoanMonthlySavings=Math.max(0,Math.min(5000,parseFloat(document.getElementById('housingLoanMonthlySavings')?.value)||monthlySavings));
+            const currentREValue=housingStatus==='owner'?Math.max(0,parseFloat(inputs.realEstateValue.value)||0):0;
+            const appliedGrowthInput=inputs.realEstateGrowthRate;
+            const reGrowthRate=(parseFloat(appliedGrowthInput?.value)||3.5)/100;
+            const reAction=inputs.realEstateRetireAction.value;
+            const rentalIncomeCurrent=Math.max(0,parseFloat(inputs.rentalIncome.value)||0);
+            const dividendMode=document.getElementById('dividendMode')?.checked??true;
+            const dividendYieldPct=Math.max(0,parseFloat(document.getElementById('dividendYield')?.value)||0);
+            const dividendYield=dividendYieldPct/100;
+            const dividendAllocationPct=Math.min(100,Math.max(0,parseFloat(document.getElementById('dividendAllocation')?.value)||0));
+            const dividendAllocation=dividendAllocationPct/100;
+            const taxRates={
+                pension:Math.min(0.5,Math.max(0,parseFloat(document.getElementById('pensionTaxRate')?.value)||0)/100),
+                dividend:Math.min(0.5,Math.max(0,parseFloat(document.getElementById('dividendTaxRate')?.value)||0)/100),
+                realEstate:Math.min(0.5,Math.max(0,parseFloat(document.getElementById('realEstateTaxRate')?.value)||0)/100)
+            };
+            const rentalPanel=document.getElementById('rentalIncomePanel'); if(reAction==='rent')rentalPanel.classList.remove('hidden');else rentalPanel.classList.add('hidden');
+            const publicPensionMonthlyCurrent=calculatePublicPension();
+            const totalMonths=Math.max(0,(lifeExpectancy-currentAge)*12);
+            const monthlyReturn=Math.pow(1+weightedAnnualReturn,1/12)-1;
+            const monthlyInflation=Math.pow(1+inflationRate,1/12)-1;
+            const monthlyREGrowth=Math.pow(1+reGrowthRate,1/12)-1;
+            let finWealth=currentFinAssets,reWealth=currentREValue,dividendAssets=0,growthAssets=0,finWealthAtRetire=0,reWealthAtRetire=0,depletionAge=null,homePurchased=(housingStatus!=='none' && housingStatus!=='never');
+            let housingLoanBalance=0, housingLoanScheduledPayment=0, housingLoanAtRetire=0, housingEquityUsed=0, housingPurchaseCostAtPurchase=0;
+            const wealthTimeline=[];
+            let retirementInitialized=false;
+
+            for(let m=0;m<totalMonths;m++){
+                const age=currentAge+Math.floor(m/12), month=m%12;
+                const isRetired=age>=retireAge;
+                const inflationMultiplier=Math.pow(1+monthlyInflation,m);
+                if(m>0) reWealth*=1+monthlyREGrowth;
+
+                // 무주택자의 경우 예상 취득 시점에 주택가격을 물가 반영해 매수합니다.
+                // 대출이 없으면 자기자금 전액을 금융자산에서 차감하고, 대출을 쓰면 자기자금만 차감합니다.
+                if(housingStatus==='none' && !homePurchased && age===homePurchaseAge && month===0){
+                    const purchaseCost=homePurchasePriceCurrent*inflationMultiplier;
+                    const loanPrincipal=housingLoanEnabled ? purchaseCost*housingLoanLTV : 0;
+                    housingLoanBalance=loanPrincipal;
+                    housingLoanScheduledPayment=loanPrincipal>0
+                        ? (housingLoanRate===0 ? loanPrincipal/(housingLoanTerm*12) : loanPrincipal*(housingLoanRate/12)/(1-Math.pow(1+housingLoanRate/12,-housingLoanTerm*12)))
+                        : 0;
+                    housingPurchaseCostAtPurchase=purchaseCost;
+                    housingEquityUsed=purchaseCost-loanPrincipal;
+                    finWealth=Math.max(0,finWealth-housingEquityUsed);
+                    reWealth+=purchaseCost;
+                    homePurchased=true;
+                }
+
+                // 주택담보대출 상환액은 현금흐름에서 먼저 차감합니다.
+                let housingLoanPayment=0;
+                if(housingLoanBalance>0){
+                    const monthlyLoanRate=housingLoanRate/12;
+                    const interest=housingLoanBalance*monthlyLoanRate;
+                    const principalPaid=Math.min(housingLoanBalance,Math.max(0,housingLoanScheduledPayment-interest));
+                    housingLoanPayment=Math.min(housingLoanBalance+interest,housingLoanScheduledPayment);
+                    housingLoanBalance=Math.max(0,housingLoanBalance-principalPaid);
+                }
+
+                // 은퇴 전: 주담대 원리금은 별도의 주거비 현금흐름으로 처리합니다.
+                // 대출 상환 중에도 사용자가 설정한 월 적립액은 계속 투자하고, 대출이 끝나면 원래 월 적립액으로 돌아갑니다.
+                if(!isRetired){
+                    const activeMonthlySavings=housingLoanBalance>0?housingLoanMonthlySavings:monthlySavings;
+                    finWealth=finWealth*(1+monthlyReturn)+activeMonthlySavings;
+                }
+
+                if(age===retireAge && month===0 && !retirementInitialized){
+                    if(reAction==='downsize'){const liquidizedRE=reWealth*0.5;finWealth+=liquidizedRE;reWealth-=liquidizedRE;}
+                    finWealthAtRetire=finWealth; reWealthAtRetire=reWealth; housingLoanAtRetire=housingLoanBalance;
+                    dividendAssets=dividendMode?finWealth*dividendAllocation:0;
+                    growthAssets=finWealth-dividendAssets;
+                    retirementInitialized=true;
+                }
+
+                let publicIncome=0,rentalIncome=0,dividendIncome=0,capitalWithdrawal=0,requiredMonthlyExpense=0,netIncome=0;
+                if(isRetired){
+                    const publicPensionStartAge=pensionType==='national'?parseInt(inputs.npsStartAge.value):65;
+                    publicIncome=age>=publicPensionStartAge?publicPensionMonthlyCurrent*inflationMultiplier:0;
+                    rentalIncome=reAction==='rent'?rentalIncomeCurrent*inflationMultiplier:0;
+                    requiredMonthlyExpense=(targetExpenseCurrent*inflationMultiplier)+housingLoanPayment;
+
+                    growthAssets*=1+monthlyReturn;
+                    dividendIncome=dividendMode?dividendAssets*dividendYield/12:0;
+                    const netPublic=publicIncome*(1-taxRates.pension), netRent=rentalIncome*(1-taxRates.realEstate), netDividend=dividendIncome*(1-taxRates.dividend);
+                    netIncome=netPublic+netRent+netDividend;
+                    const monthlyDeficit=Math.max(0,requiredMonthlyExpense-netIncome);
+                    // 원금 인출은 '인출 직전 실제 금융자산'이 존재할 때만 발생합니다.
+                    // 금융자산이 0원이 된 이후에는 부동산 가격이 아무리 높아도 원금 인출 소득을 만들지 않습니다.
+                    // (부동산은 월세/주택연금으로 전환한 경우에만 별도 소득으로 반영)
+                    const availableFinancialAssets=Math.max(0,dividendAssets+growthAssets);
+                    capitalWithdrawal = (availableFinancialAssets > 0 && monthlyDeficit > 0)
+                        ? Math.min(monthlyDeficit, availableFinancialAssets)
+                        : 0;
+                    if(capitalWithdrawal>0){
+                        const fromDividend=Math.min(dividendAssets,capitalWithdrawal);
+                        dividendAssets-=fromDividend;
+                        const remain=capitalWithdrawal-fromDividend;
+                        growthAssets=Math.max(0,growthAssets-remain);
+                    }
+                    finWealth=Math.max(0,dividendAssets+growthAssets);
+                    // 금융자산이 소진된 달의 마지막 인출액은 기록하고, 다음 달부터는 availableFinancialAssets=0이므로 인출액이 0원이 됩니다.
+                    if(finWealth<=0&&monthlyDeficit>0&&depletionAge===null)depletionAge=age;
+                }
+
+                if(month===11){wealthTimeline.push({age,finWealth:Math.max(0,finWealth),dividendAssets:Math.max(0,dividendAssets),growthAssets:Math.max(0,growthAssets),reWealth:Math.max(0,reWealth),loanBalance:Math.max(0,housingLoanBalance),loanPayment:housingLoanPayment,totalWealth:Math.max(0,finWealth+reWealth),netWealth:Math.max(0,finWealth+reWealth-housingLoanBalance),annualSavings:age<retireAge?(housingLoanBalance>0?housingLoanMonthlySavings:monthlySavings)*12:0,monthlyExpense:requiredMonthlyExpense,publicIncome,rentalIncome,dividendIncome,capitalWithdrawal,netIncome,isRetire:isRetired});}
+            }
+            if(retireAge<=currentAge){finWealthAtRetire=currentFinAssets;reWealthAtRetire=currentREValue;}else if(retirementInitialized){/* already captured */}else{const rs=wealthTimeline.find(d=>d.age===retireAge-1);if(rs){finWealthAtRetire=rs.finWealth;reWealthAtRetire=rs.reWealth;}}
+
+            const totalWealthAtRetire=finWealthAtRetire+reWealthAtRetire;
+            const netWealthAtRetire=Math.max(0,totalWealthAtRetire-housingLoanAtRetire);
+            document.getElementById('kpi-totalWealthAtRetire').innerText=formatMoney(totalWealthAtRetire);
+            document.getElementById('kpi-finWealthText').innerText=formatMoney(finWealthAtRetire);
+            document.getElementById('kpi-reWealthText').innerText=formatMoney(reWealthAtRetire);
+            const netWealthKpi=document.getElementById('kpi-netWealthAtRetire');
+            if(netWealthKpi) netWealthKpi.innerText=formatMoney(netWealthAtRetire);
+            const loanSummary=document.getElementById('housingLoanSummary');
+            const loanPanel=document.getElementById('housingLoanPanel');
+            if(loanPanel) loanPanel.classList.toggle('hidden',housingStatus!=='none');
+            const loanInputs=document.getElementById('housingLoanInputs');
+            if(loanInputs) loanInputs.classList.toggle('hidden',!housingLoanEnabled);
+            const noBtn=document.getElementById('loan-btn-no'), yesBtn=document.getElementById('loan-btn-yes');
+            if(noBtn) noBtn.className=housingLoanEnabled?"px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600":"px-3 py-2 rounded-lg border border-amber-300 bg-amber-100 text-xs font-bold text-amber-900";
+            if(yesBtn) yesBtn.className=housingLoanEnabled?"px-3 py-2 rounded-lg border border-amber-300 bg-amber-100 text-xs font-bold text-amber-900":"px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600";
+            if(loanSummary){
+                if(housingLoanEnabled){
+                    loanSummary.innerHTML=`예상 대출원금 ${formatMoney(housingPurchaseCostAtPurchase*housingLoanLTV)} · <strong>월 원리금 약 ${formatMoney(housingLoanScheduledPayment)}</strong> · 대출 상환 중 월 적립액 <strong>${formatMoney(housingLoanMonthlySavings)}</strong> · 은퇴 시 남은 대출 ${formatMoney(housingLoanAtRetire)}<br>대출 원리금은 별도 주거비로 반영하고, 설정한 월 적립액은 계속 적립합니다. 대출이 모두 상환되면 월 적립액은 원래 입력값 ${formatMoney(monthlySavings)}으로 회복됩니다.`;
+                }else{
+                    loanSummary.innerHTML=`매수 시 자기자금 <strong>${formatMoney(housingEquityUsed || homePurchasePriceCurrent*Math.pow(1+inflationRate,Math.max(0,homePurchaseAge-currentAge)))}</strong>이 현재 금융자산에서 차감되고 아파트 자산으로 전환됩니다.`;
+                }
+            }
+            const housingPurchaseReport=document.getElementById('housingPurchaseReport');
+            const housingPurchaseReportText=document.getElementById('housingPurchaseReportText');
+            if(housingPurchaseReportText){
+                if(housingStatus==='none'){
+                    const purchaseCostDisplay=housingPurchaseCostAtPurchase||homePurchasePriceCurrent*Math.pow(1+inflationRate,Math.max(0,homePurchaseAge-currentAge));
+                    if(housingLoanEnabled){
+                        housingPurchaseReportText.innerHTML=`${homePurchaseAge}세에 약 <strong>${formatMoney(purchaseCostDisplay)}</strong> 아파트를 매수하고, 자기자금 <strong>${formatMoney(housingEquityUsed)}</strong>을 금융자산에서 사용합니다. 대출은 약 <strong>${formatMoney(purchaseCostDisplay*housingLoanLTV)}</strong>, <strong>월 원리금은 약 ${formatMoney(housingLoanScheduledPayment)}</strong>입니다. 대출 상환 중에도 월 <strong>${formatMoney(housingLoanMonthlySavings)}</strong>을 적립하고, 대출 상환 후에는 원래 월 적립액 <strong>${formatMoney(monthlySavings)}</strong>으로 돌아가도록 계산합니다. 은퇴 시 남은 대출 <strong>${formatMoney(housingLoanAtRetire)}</strong>은 순자산에서 차감합니다.`;
+                    }else{
+                        housingPurchaseReportText.innerHTML=`${homePurchaseAge}세에 약 <strong>${formatMoney(purchaseCostDisplay)}</strong> 아파트를 매수하며, 매수에 필요한 자기자금 <strong>${formatMoney(housingEquityUsed||purchaseCostDisplay)}</strong>을 현재 금융자산에서 차감하고 아파트 자산으로 전환합니다.`;
+                    }
+                    if(housingPurchaseReport) housingPurchaseReport.classList.remove('hidden');
+                }else{
+                    if(housingPurchaseReport) housingPurchaseReport.classList.add('hidden');
+                }
+            }
+            // 은퇴 후 월소득 상세는 고정된 65세가 아니라 기본/목표 탭의 은퇴목표연령을 기준으로 표시합니다.
+            // 예: 은퇴목표연령이 70세라면 70세의 연금·아파트소득·배당금·원금인출액을 사용합니다.
+            const incomeReferenceAge=retireAge;
+            const inflationAtRetire=Math.pow(1+inflationRate,Math.max(0,incomeReferenceAge-currentAge));
+            const targetExpenseAtRetire=targetExpenseCurrent*inflationAtRetire;
+            const atRetire=wealthTimeline.find(d=>d.age===incomeReferenceAge)||wealthTimeline[wealthTimeline.length-1]||{};
+            const publicPensionAtRetire=atRetire.publicIncome||0,rentalIncomeAtRetire=atRetire.rentalIncome||0,dividendAtRetire=atRetire.dividendIncome||0,capitalWithdrawalAtRetire=atRetire.capitalWithdrawal||0;
+            const totalMonthlyAtRetire=(publicPensionAtRetire*(1-taxRates.pension))+(rentalIncomeAtRetire*(1-taxRates.realEstate))+(dividendAtRetire*(1-taxRates.dividend))+capitalWithdrawalAtRetire;
+            const coverageRatio=targetExpenseAtRetire>0?Math.min(200,Math.round(totalMonthlyAtRetire/targetExpenseAtRetire*100)):200;
+            document.getElementById('kpi-coverageRatio').innerText=`${coverageRatio}%`;document.getElementById('kpi-coverageBar').style.width=`${Math.min(100,coverageRatio)}%`;document.getElementById('kpi-targetExpenseText').innerText=`${Math.round(targetExpenseCurrent)}만원/월`;
+            const statusEl=document.getElementById('kpi-coverageStatus');if(coverageRatio>=100){statusEl.innerText='매우 충분';statusEl.className='font-bold text-emerald-600';}else if(coverageRatio>=80){statusEl.innerText='적정 수준';statusEl.className='font-bold text-blue-600';}else{statusEl.innerText='보완 필요';statusEl.className='font-bold text-rose-600';}
+            const depletionEl=document.getElementById('kpi-depletionAge'), depletionNoteEl=document.getElementById('kpi-depletionNote');if(depletionAge===null){depletionEl.innerText=`${lifeExpectancy}세 이상`;depletionEl.className='text-xl sm:text-2xl font-extrabold text-emerald-600';depletionNoteEl.innerText=`기대수명(${lifeExpectancy}세)까지 금융 자산 고갈 없음`;}else{depletionEl.innerText=`${depletionAge}세 고갈`;depletionEl.className='text-xl sm:text-2xl font-extrabold text-rose-600';depletionNoteEl.innerText=`기대수명보다 ${Math.max(0,lifeExpectancy-depletionAge)}년 일찍 금융자산 고갈 예상`;}
+            updateBreakdownTable(publicPensionMonthlyCurrent,reAction==='rent'?rentalIncomeCurrent:0,dividendAtRetire/inflationAtRetire,capitalWithdrawalAtRetire/inflationAtRetire,targetExpenseCurrent,inflationAtRetire,dividendMode,dividendYieldPct,dividendAllocationPct,taxRates);
+            updateRecommendations(coverageRatio,depletionAge,weightedAnnualReturn,reAction);
+            window.latestWealthTimeline=wealthTimeline;
+            renderChart(wealthTimeline,publicPensionAtRetire/inflationAtRetire,rentalIncomeAtRetire/inflationAtRetire,dividendAtRetire/inflationAtRetire,capitalWithdrawalAtRetire/inflationAtRetire,dividendMode,dividendYieldPct);
+            const dividendNote=document.getElementById('dividendModeNote');if(dividendNote)dividendNote.innerText=dividendMode?`현재 설정: 은퇴 시 금융자산의 ${dividendAllocationPct.toFixed(0)}%를 배당형으로 전환, 연 ${dividendYieldPct.toFixed(1)}% 배당. 배당금에는 ${Math.round(taxRates.dividend*1000)/10}% 세율 가정이 적용되고, 부족분은 원금에서 인출합니다.`:'배당형 운용 OFF: 금융자산 전체를 기존 포트폴리오 수익률로 운용하며 세후 연금·부동산 소득으로 부족한 생활비를 원금에서 인출합니다.';
+        }
+
+        function updateBreakdownTable(publicCurr, reCurr, dividendCurr, capitalWithdrawalCurr, targetExpenseCurr, inflationAtRetire, dividendMode, dividendYieldPct, dividendAllocationPct, taxRates) {
+            const publicFut=publicCurr*inflationAtRetire, reFut=reCurr*inflationAtRetire, dividendFut=dividendCurr*inflationAtRetire, capitalWithdrawalFut=capitalWithdrawalCurr*inflationAtRetire;
+            const pNet=publicFut*(1-taxRates.pension), rNet=reFut*(1-taxRates.realEstate), dNet=dividendFut*(1-taxRates.dividend), cNet=capitalWithdrawalFut;
+            const totalCurr=publicCurr+reCurr+dividendCurr+capitalWithdrawalCurr;
+            const totalFut=publicFut+reFut+dividendFut+capitalWithdrawalFut;
+            const totalNetFut=pNet+rNet+dNet+cNet;
+            const currentNet=publicCurr*(1-taxRates.pension)+reCurr*(1-taxRates.realEstate)+dividendCurr*(1-taxRates.dividend)+capitalWithdrawalCurr;
+            const set=(id,v)=>{const el=document.getElementById(id);if(el)el.innerText=formatMoney(v);};
+            const pct=(v)=>`${totalCurr>0?Math.round((v/totalCurr)*100):0}%`;
+            set('tbl-publicCurrent',publicCurr); set('tbl-publicFuture',publicFut); set('tbl-publicNetFuture',pNet); document.getElementById('tbl-publicRatio').innerText=pct(publicCurr);
+            set('tbl-reCurrent',reCurr); set('tbl-reFuture',reFut); set('tbl-reNetFuture',rNet); document.getElementById('tbl-reRatio').innerText=pct(reCurr);
+            const dividendLabel=document.getElementById('tbl-dividendLabel'); if(dividendLabel) dividendLabel.innerText=dividendMode?`배당금 (${dividendAllocationPct.toFixed(0)}% 전환 · ${dividendYieldPct.toFixed(1)}%)`:'배당금';
+            set('tbl-dividendCurrent',dividendCurr); set('tbl-dividendFuture',dividendFut); set('tbl-dividendNetFuture',dNet); document.getElementById('tbl-dividendRatio').innerText=pct(dividendCurr);
+            const drawLabel=document.getElementById('tbl-drawdownLabel'); if(drawLabel) drawLabel.innerText=capitalWithdrawalCurr>0?'생활비 부족분 원금 인출':'원금 인출 없음';
+            set('tbl-drawdownCurrent',capitalWithdrawalCurr); set('tbl-drawdownFuture',capitalWithdrawalFut); set('tbl-drawdownNetFuture',cNet); document.getElementById('tbl-drawdownRatio').innerText=pct(capitalWithdrawalCurr);
+            set('tbl-totalCurrent',totalCurr); set('tbl-totalFuture',totalFut); set('tbl-totalNetFuture',totalNetFut);
+            const gapCurr=totalCurr-targetExpenseCurr, gapFut=totalFut-(targetExpenseCurr*inflationAtRetire), gapNet=totalNetFut-(targetExpenseCurr*inflationAtRetire);
+            const gapRow=document.getElementById('tbl-gapRow'); const gapCurrEl=document.getElementById('tbl-gapCurrent'); const gapFutEl=document.getElementById('tbl-gapFuture'); const gapNetEl=document.getElementById('tbl-gapNetFuture'); const gapBadgeEl=document.getElementById('tbl-gapBadge');
+            if(gapCurr>=0){gapRow.className='bg-emerald-50 text-emerald-800 font-bold';gapCurrEl.innerText=`+${formatMoney(gapCurr)}`;gapFutEl.innerText=`+${formatMoney(gapFut)}`;gapNetEl.innerText=`+${formatMoney(gapNet)}`;gapBadgeEl.innerText='여유';}
+            else{gapRow.className='bg-rose-50 text-rose-800 font-bold';gapCurrEl.innerText=`-${formatMoney(Math.abs(gapCurr))}`;gapFutEl.innerText=`-${formatMoney(Math.abs(gapFut))}`;gapNetEl.innerText=`-${formatMoney(Math.abs(gapNet))}`;gapBadgeEl.innerText='부족';}
+        }
+
+        function updateRecommendations(coverageRatio, depletionAge, weightedReturn, reAction) {
+            const container = document.getElementById('aiRecommendationText');
+            let html = '';
+
+            const returnPct = (weightedReturn * 100).toFixed(1);
+
+            if (coverageRatio >= 100 && depletionAge === null) {
+                html = `
+                    <p class="flex items-start gap-1.5">
+                        <span class="text-emerald-400 font-bold">✓ 매우 우수한 은퇴 자산 구조:</span>
+                        월 적립 포트폴리오(연 ${returnPct}% 수익률)와 공적연금 조합으로 은퇴 생활비를 100% 이상 충당하며, 자산 고갈 위험이 없습니다.
+                    </p>
+                    <p class="text-slate-400">
+                        • ISA 및 비과세 저축 계좌를 적극 활용하여 은퇴 자산의 금융소득 종합과세 부담을 줄이는 것을 권장합니다.
+                    </p>
+                `;
+            } else if (coverageRatio >= 80) {
+                html = `
+                    <p class="flex items-start gap-1.5">
+                        <span class="text-blue-400 font-bold">! 안정적이나 소폭 보완 권장:</span>
+                        목표 생활비의 ${coverageRatio}% 수준을 준비한 상태입니다.
+                    </p>
+                    <p class="text-slate-400">
+                        • 나스닥100/S&P500 비중을 소폭 상향하거나 은퇴 후 실거주 주택을 주택연금으로 전환하면 100% 이상 충당이 가능해집니다.
+                    </p>
+                `;
+            } else {
+                html = `
+                    <p class="flex items-start gap-1.5 text-rose-300">
+                        <span class="font-bold">⚠️ 자산 보완 필요:</span>
+                        ${depletionAge ? depletionAge + '세에 금융 자산이 고갈될 것으로 예상됩니다.' : '목표 생활비 대비 준비금이 부족한 상태입니다.'}
+                    </p>
+                    <div class="bg-slate-800/80 p-2.5 rounded-xl space-y-1 text-[11px]">
+                        <p class="font-semibold text-amber-300">💡 자산 증대 솔루션:</p>
+                        <p>1. 월 추가 적립액 증액 및 장기 연평균 수익률이 높은 S&P500/나스닥100 비중 확대</p>
+                        <p>2. 부동산 다운사이징(매각 현금화)으로 금융 적립 자산 규모 증대</p>
+                        <p>3. 공무원/국민연금 개시 연령 조절을 통한 연금액 극대화 전략</p>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = html;
+        }
+
+        function toggleChartType(type) {
+            activeChartType = type;
+            const btnTime = document.getElementById('btn-chart-timeline');
+            const btnBreak = document.getElementById('btn-chart-breakdown');
+
+            if (type === 'timeline') {
+                btnTime.className = "px-3 py-1 rounded-lg bg-white text-blue-600 shadow-sm transition font-semibold";
+                btnBreak.className = "px-3 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition font-semibold";
+                document.getElementById('chartSummaryText').innerText = "금융자산과 부동산 자산의 통합 성장 곡선 및 은퇴 후 인출에 따른 잔여 자산 추이입니다.";
+            } else {
+                btnTime.className = "px-3 py-1 rounded-lg text-slate-600 hover:text-slate-900 transition font-semibold";
+                btnBreak.className = "px-3 py-1 rounded-lg bg-white text-blue-600 shadow-sm transition font-semibold";
+                document.getElementById('chartSummaryText').innerText = "은퇴 후 월 생활비를 구성하는 공적연금, 부동산 소득 및 자산 인출액의 비중입니다.";
+            }
+
+            calculateAll();
+        }
+
+        function renderChart(timeline, publicPension, rentalIncome, dividendIncome, capitalWithdrawal, dividendMode, dividendYieldPct) {
+            const ctx = document.getElementById('mainChart').getContext('2d');
+
+            if (mainChart) {
+                mainChart.destroy();
+            }
+
+            if (activeChartType === 'timeline') {
+                const labels = timeline.map(d => `${d.age}세`);
+                const finData = timeline.map(d => Math.round(d.finWealth));
+                const reData = timeline.map(d => Math.round(d.reWealth));
+
+                mainChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '금융 자산 (만원)',
+                                data: finData,
+                                borderColor: '#2563eb',
+                                backgroundColor: 'rgba(37, 99, 235, 0.15)',
+                                fill: true,
+                                tension: 0.2,
+                                borderWidth: 2.5
+                            },
+                            {
+                                label: '부동산 자산 (만원)',
+                                data: reData,
+                                borderColor: '#e11d48',
+                                backgroundColor: 'rgba(225, 29, 72, 0.05)',
+                                fill: true,
+                                tension: 0.2,
+                                borderWidth: 2,
+                                borderDash: [4, 4]
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'top' },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` ${context.dataset.label}: ${formatMoney(context.raw)}`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                ticks: {
+                                    callback: function(val) {
+                                        return val >= 10000 ? `${(val/10000).toFixed(1)}억원` : `${val}만원`;
+                                    }
+                                },
+                                grid: { color: '#f1f5f9' }
+                            },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+
+            } else {
+                mainChart = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['공적연금 (국민/공무원)', '부동산 월세/연금', dividendMode ? `배당금 (${dividendYieldPct.toFixed(1)}%)` : '배당금', '생활비 부족분 원금 인출'],
+                        datasets: [{
+                            data: [
+                                Math.round(publicPension),
+                                Math.round(rentalIncome),
+                                Math.round(dividendIncome),
+                                Math.round(capitalWithdrawal)
+                            ],
+                            backgroundColor: ['#4f46e5', '#f43f5e', '#f59e0b', '#3b82f6'],
+                            borderWidth: 2,
+                            borderColor: '#ffffff'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: { font: { family: 'Pretendard', size: 12 } }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        return ` ${context.label}: ${formatMoney(context.raw)}/월`;
+                                    }
+                                }
+                            }
+                        },
+                        cutout: '65%'
+                    }
+                });
+            }
+        }
+
+        // Apply Preset Scenarios
+        function applyPreset(presetKey) {
+            if (inputs.housingLoanEnabled) inputs.housingLoanEnabled.value = 'no';
+            if (presetKey === 'seoulWorker') {
+                inputs.currentAge.value = 38;
+                inputs.retireAge.value = 60;
+                inputs.currentAssets.value = 9000;
+                inputs.monthlySavings.value = 180;
+                inputs.targetMonthlyExpense.value = 350;
+                
+                portfolioWeights = { snp: 50, nasdaq: 30, schd: 10, gold: 5, cash: 0, custom: 5 };
+                updatePortfolioDisplay();
+
+                inputs.realEstateValue.value = 80000;
+                inputs.realEstateRegion.value = 'seoul';
+                onRealEstateRegionChange();
+                inputs.realEstateRetireAction.value = 'hold';
+
+                selectPensionType('national');
+                inputs.npsIncome.value = 420;
+                inputs.npsYears.value = 28;
+
+                showToast("38세 서울 직장인 Preset이 적용되었습니다.");
+            } else if (presetKey === 'gov7') {
+                inputs.currentAge.value = 35;
+                inputs.retireAge.value = 60;
+                inputs.currentAssets.value = 6000;
+                inputs.monthlySavings.value = 120;
+                inputs.targetMonthlyExpense.value = 320;
+
+                portfolioWeights = { snp: 40, nasdaq: 30, schd: 15, gold: 5, cash: 10, custom: 0 };
+                updatePortfolioDisplay();
+
+                inputs.realEstateValue.value = 45000;
+                inputs.realEstateRegion.value = 'gyeonggi';
+                onRealEstateRegionChange();
+                inputs.realEstateRetireAction.value = 'downsize';
+
+                selectPensionType('gov');
+                inputs.govJobGroup.value = 'general';
+                onGovGroupChange();
+                inputs.govRank.value = '7급';
+                onGovRankChange();
+                inputs.govStep.value = '8';
+                inputs.govYears.value = 32;
+
+                showToast("35세 7급 공무원 Preset이 적용되었습니다.");
+            } else if (presetKey === 'teacher40') {
+                inputs.currentAge.value = 42;
+                inputs.retireAge.value = 62;
+                inputs.currentAssets.value = 15000;
+                inputs.monthlySavings.value = 200;
+                inputs.targetMonthlyExpense.value = 400;
+
+                portfolioWeights = { snp: 30, nasdaq: 20, schd: 35, gold: 10, cash: 5, custom: 0 };
+                updatePortfolioDisplay();
+
+                inputs.realEstateValue.value = 75000;
+                inputs.realEstateRegion.value = 'gyeonggi';
+                onRealEstateRegionChange();
+                inputs.realEstateRetireAction.value = 'rent';
+                inputs.rentalIncome.value = 120;
+
+                selectPensionType('gov');
+                inputs.govJobGroup.value = 'teacher';
+                onGovGroupChange();
+                inputs.govStep.value = '18';
+                inputs.govYears.value = 34;
+
+                showToast("42세 초등교사 (18호봉) Preset이 적용되었습니다.");
+            } else if (presetKey === 'military45') {
+                inputs.currentAge.value = 45;
+                inputs.retireAge.value = 58;
+                inputs.currentAssets.value = 12000;
+                inputs.monthlySavings.value = 160;
+                inputs.targetMonthlyExpense.value = 380;
+
+                portfolioWeights = { snp: 35, nasdaq: 25, schd: 25, gold: 10, cash: 5, custom: 0 };
+                updatePortfolioDisplay();
+
+                inputs.realEstateValue.value = 55000;
+                inputs.realEstateRegion.value = 'busan';
+                onRealEstateRegionChange();
+                inputs.realEstateRetireAction.value = 'hold';
+
+                selectPensionType('gov');
+                inputs.govJobGroup.value = 'military';
+                onGovGroupChange();
+                inputs.govRank.value = '상사';
+                onGovRankChange();
+                inputs.govStep.value = '14';
+                inputs.govYears.value = 28;
+
+                showToast("45세 군인(상사 14호봉) Preset이 적용되었습니다.");
+            }
+
+            // Sync all range displays
+            ['currentAssets', 'monthlySavings', 'targetMonthlyExpense', 'realEstateValue', 'rentalIncome', 'npsIncome'].forEach(id => {
+                const display = document.getElementById(`display-${id}`);
+                if (display && inputs[id]) display.innerText = formatMoney(parseFloat(inputs[id].value));
+            });
+
+            calculateGovIncome();
+            calculateAll();
+        }
+
+        function resetToDefaults() {
+            applyPreset('seoulWorker');
+            showToast("초기화되었습니다.");
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-message').innerText = msg;
+            toast.classList.remove('hidden');
+            setTimeout(() => {
+                toast.classList.add('hidden');
+            }, 3000);
+        }
+
+        function exportReport() {
+            window.print();
+        }
+            function setHousingLoanEnabled(value){
+            const enabled=value==='yes';
+            if(inputs.housingLoanEnabled) inputs.housingLoanEnabled.value=enabled?'yes':'no';
+            const panel=document.getElementById('housingLoanInputs');
+            if(panel) panel.classList.toggle('hidden',!enabled);
+            const noBtn=document.getElementById('loan-btn-no'), yesBtn=document.getElementById('loan-btn-yes');
+            if(noBtn) noBtn.className=enabled?"px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600":"px-3 py-2 rounded-lg border border-amber-300 bg-amber-100 text-xs font-bold text-amber-900";
+            if(yesBtn) yesBtn.className=enabled?"px-3 py-2 rounded-lg border border-amber-300 bg-amber-100 text-xs font-bold text-amber-900":"px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600";
+            const savingsField=inputs.housingLoanMonthlySavings||document.getElementById('housingLoanMonthlySavings');
+            if(enabled && savingsField && (!savingsField.value || Number(savingsField.value)===0)) savingsField.value=inputs.monthlySavings?.value||150;
+            calculateAll();
+        }
+
+</script>
+
+<script id="wizard-controller">
+(function(){
+  const W = {step:1, q:0, values:{}, started:false};
+  const conditionalChoices={dividendMode:null};
+  const steps = [
+    {title:'기본 설정', questions:[
+      {id:'currentAge', title:'현재 나이는 몇 살인가요?', help:'현재 나이를 입력해주세요.', unit:'세', min:20,max:80},
+      {id:'retireAge', title:'몇 살에 은퇴하고 싶나요?', help:'희망하는 은퇴 목표 연령입니다.', unit:'세', min:40,max:85},
+      {id:'lifeExpectancy', title:'몇 살까지 살 것으로 예상하나요?', help:'노후 자산을 계산할 마지막 나이입니다.', unit:'세', min:65,max:110},
+      {id:'currentAssets', title:'현재 금융자산은 얼마인가요?', help:'예금·주식·펀드 등 현재 금융자산만 입력합니다. 아파트는 다음 단계에서 입력합니다.', unit:'만원', min:0,max:1000000},
+      {id:'monthlySavings', title:'매달 얼마를 추가로 저축·투자할까요?', help:'은퇴 목표 연령까지만 매월 적립됩니다.', unit:'만원', min:0,max:5000},
+      {id:'targetMonthlyExpense', title:'은퇴 후 한 달에 얼마가 필요할까요?', help:'성인 1인당 150 권장. 현재 가치 기준 생활비를 입력해주세요.', unit:'만원', min:50,max:3000},
+      {id:'inflationRate', title:'생활비는 매년 얼마나 오를까요?', help:'모르겠다면 기본값 2.8%를 사용해도 됩니다.', unit:'%', min:0,max:10, step:.1},
+      {id:'dividendMode', type:'choice', title:'은퇴 시점에 그동안 모아둔 자산 일부를 배당 자산으로 바꿀까요?', help:'예를 선택하면 은퇴 시 금융자산의 일부를 배당 자산으로 전환합니다.', choices:[['yes','예'],['no','아니오']]},
+      {id:'dividendAllocation', title:'금융자산 중 몇 %를 배당형으로 전환할까요?', help:'예: 50%라면 은퇴 시 금융자산의 절반을 배당형으로 전환합니다.', unit:'%', min:0,max:100},
+      {id:'dividendYield', title:'배당률은 몇 %로 가정할까요?', help:'직접 원하는 배당률을 입력할 수 있습니다.', unit:'%', min:0,max:20, step:.1}
+    ]},
+    {title:'월 적립상품 포트폴리오', questions:[
+      {id:'slider-snp',type:'portfolio',key:'snp',title:'VOO(S&P500)에 얼마를 넣을까요?'},
+      {id:'slider-nasdaq',type:'portfolio',key:'nasdaq',title:'QQQM(나스닥100)에 얼마를 넣을까요?'},
+      {id:'slider-schd',type:'portfolio',key:'schd',title:'SCHD에 얼마를 넣을까요?'},
+      {id:'slider-gold',type:'portfolio',key:'gold',title:'ACE KRX 금현물에 얼마를 넣을까요?'},
+      {id:'slider-cash',type:'portfolio',key:'cash',title:'안전자산에 얼마를 넣을까요?'},
+      {id:'slider-custom',type:'portfolio',key:'custom',title:'직접 정한 목표수익률 상품에 얼마를 넣을까요?'},
+      {id:'customReturn',title:'직접 투자상품의 목표 연수익률은?',help:'직접 투자상품을 사용하지 않는다면 0% 비중으로 두면 됩니다.',unit:'%',min:-20,max:50,step:.1},
+      {id:'dividendReinvest',type:'toggle',title:'배당·분배금을 다시 투자할까요?',help:'켜면 분배금을 재투자하는 방식으로 계산합니다.'},
+      {id:'feeApply',type:'toggle',title:'ETF·금 ETF의 운용보수를 반영할까요?',help:'켜면 상품별 운용보수를 기대수익률에서 차감합니다.'}
+    ]},
+    {title:'아파트 자산', questions:[
+      {id:'housingStatus',type:'choice',title:'현재 아파트를 보유하고 있나요?',help:'무주택자는 앞으로 집을 살지 여부도 선택할 수 있습니다.',choices:[['owner','유주택자입니다'],['none','무주택자이며 나중에 매수할 예정입니다'],['never','무주택자로 평생 주택을 매수하지 않을 예정입니다']]},
+      {id:'homePurchaseAge',title:'몇 살쯤 아파트를 구입할 예정인가요?',help:'앞으로 아파트를 매수할 예정인 경우에만 나오는 질문입니다.',unit:'세',min:20,max:100},
+      {id:'homePurchasePrice',title:'구입할 아파트 가격은 얼마인가요? <span class="text-rose-600">(현재 기준 가격)</span>',help:'미래에 실제로 살 때의 가격이 아니라, <strong>오늘 현재 기준으로 생각하는 아파트 가격</strong>을 입력해주세요. 시뮬레이션에서 구입 시점까지 물가상승률을 자동 반영합니다.',unit:'만원',min:0,max:1000000},
+      {id:'realEstateRegion',type:'select',housingScope:'future',title:'매수할 아파트는 어느 지역인가요?',selectFrom:'realEstateRegion'},
+      {id:'realEstateDistrict',type:'select',housingScope:'future',title:'구체적인 지역을 선택해주세요.',selectFrom:'realEstateDistrict'},
+      {id:'realEstateGrowthRate',housingScope:'future',title:'해당 지역 아파트 연 예상 상승률은 얼마로 할까요?',help:'선택한 지역의 기본 상승률이 자동으로 들어갑니다. 원하면 직접 수정할 수 있습니다.',unit:'%',min:0,max:15,step:.1},
+      {id:'housingLoanEnabled',type:'choice',title:'아파트 매수에 대출을 사용할까요?',help:'대출을 사용하지 않으면 매수 시 필요한 자기자금이 현재 금융자산에서 바로 차감됩니다.',choices:[['no','대출 없이 매수'],['yes','대출 사용']]},
+      {id:'housingLoanLTV',title:'아파트 가격의 몇 %를 대출받을까요?',help:'대출을 선택한 경우에만 입력합니다.',unit:'%',min:0,max:100},
+      {id:'housingLoanRate',title:'대출 금리는 연 몇 %로 가정할까요?',help:'대출을 선택한 경우에만 입력합니다.',unit:'%',min:0,max:15,step:.1},
+      {id:'housingLoanTerm',title:'대출을 몇 년 동안 상환할까요?',help:'대출을 선택한 경우에만 입력합니다.',unit:'년',min:1,max:40},
+      {id:'housingLoanMonthlySavings',title:'대출을 갚는 동안에도 매달 얼마를 적립·투자할까요?',help:'월급·생활비 등을 고려해 주담대를 갚으면서 실제로 유지할 수 있는 월 적립액을 정해주세요. 대출 원리금과 별도로 계산합니다.',unit:'만원',min:0,max:5000},
+      {id:'realEstateValue',title:'현재 보유 아파트의 시세는 얼마인가요?',help:'현재 아파트 시세를 입력해주세요.',unit:'만원',min:0,max:1000000},
+      {id:'realEstateRegion',type:'select',housingScope:'owner',title:'아파트가 있는 지역은 어디인가요?',selectFrom:'realEstateRegion'},
+      {id:'realEstateDistrict',type:'select',housingScope:'owner',title:'세부 지역을 선택해주세요.',selectFrom:'realEstateDistrict'},
+      {id:'realEstateGrowthRate',housingScope:'owner',title:'아파트 연 예상 상승률은 얼마로 할까요?',help:'지역별 기본값이 자동으로 들어갑니다. 원하면 직접 수정할 수 있습니다.',unit:'%',min:0,max:15,step:.1},
+      {id:'realEstateRetireAction',type:'choice',title:'은퇴 후 아파트는 어떻게 할까요?',help:'은퇴 후 주택을 계속 보유할지, 다운사이징할지, 월세·주택연금으로 소득화할지 선택해주세요.',choices:[['hold','계속 실거주 보유'],['downsize','은퇴 시 매각/다운사이징'],['rent','은퇴 후 월세/주택연금 전환']]},
+      {id:'rentalIncome',title:'은퇴 후 월세·주택연금 예상 수령액은?',help:'월세/주택연금 전환을 선택한 경우에만 사용됩니다. 현재 가치 기준입니다.',unit:'만원',min:0,max:500}
+    ]},
+    {title:'연금 설정', questions:[
+      {id:'pensionType',type:'pension',title:'어떤 공적연금에 가입되어 있나요?',choices:[['national','국민연금'],['gov','공무원·사학연금']]},
+      {id:'npsIncome',title:'국민연금 가입기간의 평균 월소득은 얼마인가요?',help:'국민연금 선택 시 입력합니다.',unit:'만원',min:50,max:590},
+      {id:'npsYears',title:'국민연금은 몇 년 가입할 예정인가요?(만 60세까지 납입 가능)',help:'국민연금 선택 시 입력합니다.',unit:'년',min:10,max:40},
+      {id:'npsStartAge',type:'select',title:'국민연금은 몇 살부터 받을까요?',selectFrom:'npsStartAge'},
+      {id:'govJobGroup',type:'select',title:'직군을 선택해주세요.',selectFrom:'govJobGroup'},
+      {id:'govRank',type:'select',title:'현재 직급·계급을 선택해주세요.',selectFrom:'govRank'},
+      {id:'govStep',type:'select',title:'현재 호봉을 선택해주세요.',selectFrom:'govStep'},
+      {id:'govYears',title:'공무원연금 기여금을 몇 년 납부할 예정인가요?(최대 36년)',help:'기여금 납부기간은 최대 36년까지 입력할 수 있습니다.',unit:'년',min:10,max:36},
+      {id:'govWageGrowth',title:'향후 연평균 보수 상승률은?',help:'모르겠다면 기본값 2.5%를 사용해도 됩니다.',unit:'%',min:0,max:8,step:.1}
+    ]}
+  ];
+
+  function el(id){return document.getElementById(id);}
+  function syncValue(id,val){
+    const x=el(id); if(!x)return;
+    if(x.type==='checkbox') x.checked=!!val;
+    else x.value=val;
+    x.dispatchEvent(new Event(x.tagName==='SELECT'?'change':'input',{bubbles:true}));
+  }
+  function currentQuestion(){
+    const qs=steps[W.step-1].questions;
+    while(W.q<qs.length && !isQuestionVisible(qs[W.q])) W.q++;
+    return qs[W.q];
+  }
+  function isQuestionVisible(q){
+    if(['homePurchaseAge','homePurchasePrice','housingLoanEnabled'].includes(q.id))
+      return (el('housingStatus')?.value||'owner')==='none';
+    if(['housingLoanLTV','housingLoanRate','housingLoanTerm','housingLoanMonthlySavings'].includes(q.id))
+      return (el('housingStatus')?.value||'owner')==='none' && el('housingLoanEnabled')?.value==='yes';
+    if(q.id==='realEstateRegion'||q.id==='realEstateDistrict'||q.id==='realEstateGrowthRate'){
+      const status=el('housingStatus')?.value||'owner';
+      if(q.housingScope==='future') return status==='none';
+      if(q.housingScope==='owner') return status==='owner';
+      return ['owner','none'].includes(status);
+    }
+    if(q.id==='realEstateValue'||q.id==='realEstateRetireAction')
+      return (el('housingStatus')?.value||'owner')==='owner';
+    if(q.id==='rentalIncome')
+      return (el('housingStatus')?.value||'owner')==='owner' && el('realEstateRetireAction')?.value==='rent';
+
+    if(q.id==='dividendAllocation'||q.id==='dividendYield')
+      return (conditionalChoices.dividendMode ?? 'no')==='yes';
+
+    if(['npsIncome','npsYears','npsStartAge'].includes(q.id))
+      return pensionType==='national';
+
+    if(['govJobGroup','govRank','govStep','govYears','govWageGrowth'].includes(q.id))
+      return pensionType==='gov';
+
+    return true;
+  }
+  function setStepUI(){
+    for(let i=1;i<=4;i++){
+      const p=el('wprog'+i); p.className=i<W.step?'done':(i===W.step?'active':'');
+    }
+    el('wizardStepLabel').textContent=`${W.step}단계 · ${steps[W.step-1].title}`;
+    render();
+  }
+  function render(){
+    const qs=steps[W.step-1].questions;
+
+    // 2단계는 상품 설명과 포트폴리오 비중을 한 화면에서 모두 확인/입력합니다.
+    if(W.step===2){
+      el('wizardQuestionCount').textContent='상품 설명 · 포트폴리오';
+      const products=[
+        ['custom','직접 투자상품','사용자가 직접 정한 상품의 목표 연평균 수익률을 입력해 계산합니다.','직접 입력'],
+        ['snp','VOO · S&P500','미국 대형주 500여 종목에 투자하는 대표적인 지수 ETF입니다. 장기 성장성을 기대하지만 주가 변동이 있습니다.','9%'],
+        ['nasdaq','QQQM · 나스닥100','미국 기술·성장주 중심의 나스닥100 지수를 추종합니다. 성장 잠재력이 높은 대신 변동성이 더 클 수 있습니다.','11%'],
+        ['schd','SCHD','배당 성장주 중심의 ETF입니다. 배당과 주가 성장을 함께 기대하는 상품입니다.','8%'],
+        ['gold','ACE KRX 금현물','국내 금 현물 가격을 추종합니다. 주식과 움직임이 다를 수 있어 포트폴리오 분산에 활용할 수 있습니다.','6.5%'],
+        ['cash','예적금','예금·적금 등 상대적으로 안정적인 자산입니다. 수익률은 연 2%로 가정합니다.','2%']
+      ];
+      let body=`<div class="wizard-kicker">2단계</div>
+        <div class="wizard-title">월 적립금을 어떻게 나눠 투자할까요?</div>
+        <p class="wizard-help">상품의 특징과 예상 연평균 수익률을 먼저 확인한 뒤, 아래에 원하는 비중을 숫자로 입력해주세요. <strong>합계는 100%</strong>가 되어야 합니다.</p>
+        <div class="grid gap-3 mt-6">`;
+      products.forEach(([key,name,desc,ret])=>{
+        const value=Number(portfolioWeights[key]||0);
+        body+=`<div class="wizard-portfolio-row" style="margin-top:0">
+          <div class="wizard-portfolio-head">
+            <span>${name}</span>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-400">${key==='custom'
+                ? `목표 연평균 수익률 <input class="wizard-input" style="display:inline-block;width:82px;margin:0 4px;padding:6px 8px;font-size:14px" type="number" min="-20" max="50" step="0.1" value="${el('customReturn')?.value||0}" oninput="window.wizardInput('customReturn',this.value)">%`
+                : `예상 연평균 수익률 ${ret}`}</span>
+              <div class="wizard-unit" style="width:120px;margin-left:6px">
+                <input class="wizard-input" style="margin-top:0;padding:11px 42px 11px 12px;font-size:16px" type="number" min="0" max="100" step="1" value="${value}" oninput="window.wizardPortfolio('${key}',this.value)">
+                <span style="bottom:12px">%</span>
+              </div>
+            </div>
+          </div>
+          <div class="wizard-small">${desc}</div>
+        </div>`;
+      });
+      body+=`</div>
+        <div class="wizard-summary">
+          현재 배분 합계: <strong id="wizardPortfolioTotal">${portfolioTotal()}%</strong>
+          · 남은 비중: <strong id="wizardPortfolioRemain">${Math.max(0,100-portfolioTotal())}%</strong>
+          <div class="mt-1">자율 투자 상품을 선택했다면 아래 상세 설정에서 목표 수익률을 직접 정할 수 있습니다.</div>
+        </div>
+        
+        <button class="wizard-toggle w-full text-left" onclick="window.wizardToggle('dividendReinvest')">
+          <span class="w-5 h-5 rounded-md border flex items-center justify-center ${el('dividendReinvest')?.checked?'bg-blue-600 border-blue-600 text-white':'bg-white border-slate-300'}">${el('dividendReinvest')?.checked?'✓':''}</span>
+          <span>${el('dividendReinvest')?.checked?'배당·분배금을 다시 투자합니다':'배당·분배금을 다시 투자하지 않습니다'}</span>
+        </button>
+        <button class="wizard-toggle w-full text-left" onclick="window.wizardToggle('feeApply')">
+          <span class="w-5 h-5 rounded-md border flex items-center justify-center ${el('feeApply')?.checked?'bg-blue-600 border-blue-600 text-white':'bg-white border-slate-300'}">${el('feeApply')?.checked?'✓':''}</span>
+          <span>${el('feeApply')?.checked?'ETF·금 상품의 운용보수를 반영합니다':'ETF·금 상품의 운용보수를 반영하지 않습니다'}</span>
+        </button>
+        <div class="wizard-actions"><button class="wizard-btn back" onclick="window.wizardBack()">이전</button><button class="wizard-btn next" onclick="window.wizardNext()">다음</button></div>`;
+      el('wizardBody').innerHTML=body;
+      if(window.lucide) lucide.createIcons();
+      return;
+    }
+
+    const q=currentQuestion();
+    if(!q){
+      if(W.step<4){W.step++;W.q=0;setStepUI();return;}
+      finish();return;
+    }
+    el('wizardQuestionCount').textContent=`${W.q+1} / ${qs.filter(isQuestionVisible).length}`;
+    let body='';
+    if(q.type==='choice'||q.type==='pension'){
+      body=`<div class="wizard-kicker">${W.step}단계</div><div class="wizard-title">${q.title}</div><p class="wizard-help">${q.help||''}</p><div class="wizard-choice-grid ${q.id==='housingStatus'?'housing-status-grid':''}${q.id==='realEstateRetireAction'?' housing-action-grid':''}"${q.id==='housingStatus'?' style=\"grid-template-columns:1fr;\"':''}>`;
+      q.choices.forEach(([v,label])=>{
+        const selected=(q.id==='pensionType'?pensionType:(conditionalChoices[q.id] ?? el(q.id)?.value))===v;
+        body+=`<button type="button" class="wizard-choice ${selected?'selected':''}" onclick="window.wizardChoose('${q.id}','${v}')">${label}</button>`;
+      });
+      body+='</div>';
+    } else if(q.type==='toggle'){
+      const checked=!!el(q.id)?.checked;
+      body=`<div class="wizard-kicker">${W.step}단계</div><div class="wizard-title">${q.title}</div><p class="wizard-help">${q.help||''}</p>
+      <button class="wizard-toggle w-full text-left" onclick="window.wizardToggle('${q.id}')">
+        <span class="w-5 h-5 rounded-md border flex items-center justify-center ${checked?'bg-blue-600 border-blue-600 text-white':'bg-white border-slate-300'}">${checked?'✓':''}</span>
+        <span>${checked?'사용합니다':'사용하지 않습니다'}</span>
+      </button>`;
+    } else if(q.type==='portfolio'){
+      // 2단계는 위에서 처리하므로 이 분기는 호환성만 유지합니다.
+      const key=q.key, value=portfolioWeights[key]||0;
+      body=`<div class="wizard-kicker">${W.step}단계</div><div class="wizard-title">${q.title}</div>
+      <p class="wizard-help">월 적립액 중 이 상품에 배분할 비중입니다.</p>
+      <div class="wizard-portfolio-row"><div class="wizard-portfolio-head"><span>${key==='snp'?'VOO · S&P500':key==='nasdaq'?'QQQM · 나스닥100':key==='schd'?'SCHD':key==='gold'?'ACE KRX 금현물':key==='cash'?'예적금':'자율 투자'}</span><strong>${value}%</strong></div></div>`;
+    } else if(q.type==='select'){
+      const source=el(q.selectFrom);
+      const isHousingRegion=(q.id==='realEstateRegion'||q.id==='realEstateDistrict');
+      const housingHelp=isHousingRegion ? '지역을 선택하면 아파트 상승률도 자동으로 계산됩니다. 잘 모르셔도 괜찮습니다. <strong>기본값을 그대로 두고 바로 다음 버튼을 누르셔도 됩니다.</strong>' : (q.help||'');
+      body=`<div class="wizard-kicker">${W.step}단계</div><div class="wizard-title">${q.title}</div><p class="wizard-help">${housingHelp}</p>
+      ${isHousingRegion?`<div class="mt-4 p-3.5 rounded-xl border border-blue-200 bg-blue-50 text-blue-950 text-xs leading-relaxed"><div class="font-extrabold flex items-center gap-1.5">🏠 지역별 상승률이 자동 입력됩니다</div><div class="mt-1"><strong>잘 모르시면 수정하지 않아도 됩니다.</strong> 지역만 선택한 뒤 <strong>‘다음’</strong>을 눌러 진행하세요.</div></div>`:''}
+      <select id="wizardSelectTemp" class="wizard-input" style="appearance:auto" onchange="window.wizardSelect('${q.id}',this.value)">${source?source.innerHTML:''}</select>`;
+    } else {
+      const source=el(q.id);
+      const value=source?.value ?? '';
+      const isHousingGrowth=(q.id==='realEstateGrowthRate');
+      const help=isHousingGrowth ? '선택한 지역의 기본 상승률이 자동으로 입력됩니다. <strong>잘 모르시면 수정하지 말고 기본값 그대로 두고 ‘다음’을 누르셔도 됩니다.</strong>' : (q.help||'');
+      body=`<div class="wizard-kicker">${W.step}단계</div><div class="wizard-title">${q.title}</div><p class="wizard-help">${help}</p>
+      ${isHousingGrowth?`<div class="mt-4 p-3.5 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-950 text-xs leading-relaxed"><div class="font-extrabold flex items-center gap-1.5">✅ 기본값이 자동으로 들어와 있습니다</div><div class="mt-1"><strong>잘 모르시면 그대로 두세요.</strong> 자동 입력된 상승률을 확인하고 바로 <strong>‘다음’</strong>을 누르면 됩니다.</div></div>`:''}
+      <div class="wizard-unit"><input id="wizardInputTemp" class="wizard-input" type="number" value="${value}" min="${q.min??''}" max="${q.max??''}" step="${q.step??1}" autofocus oninput="window.wizardInput('${q.id}',this.value)"><span>${q.unit||''}</span></div>`;
+    }
+    const first=W.q===0&&W.step===1;
+    body+=`<div class="wizard-actions"><button class="wizard-btn back" onclick="window.wizardBack()">${first?'처음으로':'이전'}</button><button id="wizardNext" class="wizard-btn next" onclick="window.wizardNext()">다음</button></div>`;
+    el('wizardBody').innerHTML=body;
+    const temp=el('wizardSelectTemp'); if(temp){temp.value=el(q.id)?.value||'';}
+    const inp=el('wizardInputTemp'); if(inp){inp.focus();inp.select();}
+    if(window.lucide) lucide.createIcons();
+  }
+  function portfolioTotal(){return Object.values(portfolioWeights).reduce((a,b)=>a+Number(b||0),0);}
+  window.wizardStart=function(){
+    W.started=true; W.step=1;W.q=0;
+    el('wizardStartCard').classList.add('hidden');el('wizardCard').classList.remove('hidden');
+    setStepUI();
+  };
+  window.wizardInput=function(id,v){syncValue(id,v);};
+  window.wizardToggle=function(id){
+    const x=el(id); if(x){x.checked=!x.checked;x.dispatchEvent(new Event('change',{bubbles:true}));}
+    render();
+  };
+  window.wizardChoose=function(id,v){
+    if(id==='dividendMode'){
+      conditionalChoices.dividendMode=v;
+      if(v==='no'){syncValue('dividendAllocation',0);syncValue('dividendYield',0);}
+    }else if(id==='pensionType'){
+      selectPensionType(v);
+    }else if(id==='housingStatus'){
+      syncValue(id,v);
+      if(v!=='none') syncValue('housingLoanEnabled','no');
+    }else{
+      syncValue(id,v);
+    }
+    // 선택 상태는 계산 성공 여부와 무관하게 즉시 화면에 반영합니다.
+    render();
+    try { calculateAll(); } catch (err) { console.error('wizard choice calculation error:', err); }
+    render();
+  };
+  window.wizardSelect=function(id,v){syncValue(id,v);render();};
+  window.wizardPortfolio=function(key,v){
+    let n=Math.max(0,Math.min(100,Number(v)||0));
+    portfolioWeights[key]=n;
+    updatePortfolioDisplay();calculateAll();
+    const total=el('wizardPortfolioTotal'), remain=el('wizardPortfolioRemain');
+    if(total) total.textContent=portfolioTotal()+'%';
+    if(remain) remain.textContent=Math.max(0,100-portfolioTotal())+'%';
+  };
+  window.wizardNext=function(){
+    if(W.step===2){
+      if(portfolioTotal()!==100){
+        alert('포트폴리오 비중의 합계가 100%가 되도록 맞춰주세요.');return;
+      }
+      W.step=3; W.q=0; setStepUI(); return;
+    }
+    const q=currentQuestion();
+    if(!q){if(W.step<4){W.step++;W.q=0;setStepUI();}else finish();return;}
+    if(q.id==='retireAge' && Number(el('retireAge').value)<=Number(el('currentAge').value)){alert('은퇴 목표 연령은 현재 나이보다 높아야 합니다.');return;}
+    if(q.id==='lifeExpectancy' && Number(el('lifeExpectancy').value)<=Number(el('retireAge').value)){alert('기대수명은 은퇴 목표 연령보다 높아야 합니다.');return;}
+    if(q.id==='homePurchaseAge' && Number(el('homePurchaseAge').value)<Number(el('currentAge').value)){alert('주택 취득 연령은 현재 나이보다 낮을 수 없습니다.');return;}
+    W.q++;
+    if(W.q>=steps[W.step-1].questions.length){
+      if(W.step<4){W.step++;W.q=0;}
+      else {finish();return;}
+    }
+    setStepUI();
+  };
+  function lastVisibleQuestion(stepIndex){
+    let i=steps[stepIndex-1].questions.length-1;
+    while(i>=0 && !isQuestionVisible(steps[stepIndex-1].questions[i])) i--;
+    return i;
+  }
+  window.wizardBack=function(){
+    let prev=W.q-1;
+    while(prev>=0 && !isQuestionVisible(steps[W.step-1].questions[prev])) prev--;
+    if(prev>=0){
+      W.q=prev;
+      setStepUI();
+      return;
+    }
+    if(W.step>1){
+      W.step--;
+      W.q=lastVisibleQuestion(W.step);
+      setStepUI();
+      return;
+    }
+    el('wizardCard').classList.add('hidden');
+    el('wizardStartCard').classList.remove('hidden');
+  };
+  function finish(){
+    // 계산 실패가 발생하더라도 마지막 결과 화면 자체는 반드시 표시되도록 합니다.
+    try { calculateAll(); } catch (err) { console.error('calculateAll error during finish:', err); }
+
+    el('wizardCard').classList.add('hidden');
+    el('wizardStartCard').classList.add('hidden');
+    el('wizardReportCard').classList.remove('hidden');
+
+    const retire=Number(el('retireAge')?.value)||60;
+    const total=el('kpi-totalWealthAtRetire')?.textContent||'계산 불가';
+    const netTotal=el('kpi-netWealthAtRetire')?.textContent||total;
+    const coverage=el('kpi-coverageRatio')?.textContent||'0%';
+    const depletion=el('kpi-depletionAge')?.textContent||'확인 필요';
+    const pType=(typeof pensionType!=='undefined' && pensionType==='national')?'국민연금':'공무원·사학연금';
+    const housingStatusNow=el('housingStatus')?.value||'owner';
+
+    let housingHtml='';
+    if(housingStatusNow==='none'){
+      const loanNow=(el('housingLoanEnabled')?.value||'no')==='yes';
+      const currentAge=Number(el('currentAge')?.value)||38;
+      const ageNow=Math.max(currentAge,Number(el('homePurchaseAge')?.value)||60);
+      const purchasePriceCurrent=Math.max(0,Number(el('homePurchasePrice')?.value)||0);
+      const inflationNow=Math.max(0,Number(el('inflationRate')?.value)||0)/100;
+      const purchaseCostNow=purchasePriceCurrent*Math.pow(1+inflationNow,Math.max(0,ageNow-currentAge));
+      const ltvNow=Math.min(100,Math.max(0,Number(el('housingLoanLTV')?.value)||0))/100;
+      const rateNow=Math.max(0,Number(el('housingLoanRate')?.value)||0)/100;
+      const termNow=Math.max(1,Number(el('housingLoanTerm')?.value)||30);
+      const loanPrincipalNow=loanNow?purchaseCostNow*ltvNow:0;
+      const monthlyLoanNow=loanPrincipalNow>0?(rateNow===0?loanPrincipalNow/(termNow*12):loanPrincipalNow*(rateNow/12)/(1-Math.pow(1+rateNow/12,-termNow*12))):0;
+      const monthlySavingsDuringLoan=Math.max(0,Number(el('housingLoanMonthlySavings')?.value)||Number(el('monthlySavings')?.value)||0);
+      housingHtml=`<div class="mt-3 p-3 rounded-2xl bg-amber-50 border border-amber-100">
+        <div class="text-xs text-amber-700 font-bold">아파트 매수 반영</div>
+        <div class="text-xs text-slate-600 mt-1 leading-relaxed">
+          <strong>현재 기준 가격 ${formatMoney(purchasePriceCurrent)}</strong>을 기준으로 ${ageNow}세의 예상 매수가격을 ${formatMoney(purchaseCostNow)}으로 계산했습니다.
+          ${loanNow
+            ? `자기자금 ${formatMoney(Math.max(0,purchaseCostNow-loanPrincipalNow))}을 금융자산에서 사용하고, 대출 ${formatMoney(loanPrincipalNow)} · <strong>월 원리금 약 ${formatMoney(monthlyLoanNow)}</strong>을 반영했습니다. 대출 상환 중에도 월 <strong>${formatMoney(monthlySavingsDuringLoan)}</strong>을 적립하고, 상환 완료 후 원래 월 적립액으로 돌아갑니다.`
+            : `매수 시 필요한 자기자금 ${formatMoney(purchaseCostNow)}을 금융자산에서 사용해 아파트 자산으로 전환합니다.`}
+        </div>
+      </div>`;
+    } else if(housingStatusNow==='never'){
+      housingHtml=`<div class="mt-3 p-3 rounded-2xl bg-slate-50 border border-slate-200">
+        <div class="text-xs text-slate-700 font-bold">평생 무주택 선택</div>
+        <div class="text-xs text-slate-600 mt-1 leading-relaxed">아파트 매수 및 주택자산을 시뮬레이션에 반영하지 않고, 금융자산 중심으로 계산했습니다.</div>
+      </div>`;
+    }
+
+    el('wizardReportSummary').innerHTML=`
+      <div class="grid sm:grid-cols-3 gap-3">
+        <div class="p-4 rounded-2xl bg-blue-50 border border-blue-100"><div class="text-xs text-blue-600 font-bold">은퇴 시점 (${retire}세)</div><div class="text-xl font-black text-slate-900 mt-1">${total}</div><div class="text-xs text-slate-500 mt-1">총자산 · 순자산 ${netTotal}</div></div>
+        <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-100"><div class="text-xs text-emerald-600 font-bold">생활비 충족률</div><div class="text-xl font-black text-slate-900 mt-1">${coverage}</div><div class="text-xs text-slate-500 mt-1">${pType}</div></div>
+        <div class="p-4 rounded-2xl bg-amber-50 border border-amber-100"><div class="text-xs text-amber-600 font-bold">금융자산 고갈</div><div class="text-xl font-black text-slate-900 mt-1">${depletion}</div><div class="text-xs text-slate-500 mt-1">기대수명까지의 예상</div></div>
+      </div>${housingHtml}`;
+  }
+  function reportText(id,fallback='-'){ const x=el(id); return x&&x.textContent ? x.textContent.trim() : fallback; }
+  function reportValue(id,fallback='-'){ const x=el(id); return x&&x.value!==undefined ? x.value : fallback; }
+  function reportNumber(id,fallback=0){ const n=Number(reportValue(id,fallback)); return Number.isFinite(n)?n:fallback; }
+  function escapeHtml(v){ return String(v==null?'':v).replace(/[&<>'"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[ch])); }
+  function buildDetailedWizardReport(){
+    // 상세보고서는 메인 계산 결과를 다시 계산해서 최대한 많이 보여주되,
+    // 보고서 자체가 하나의 계산 오류 때문에 전체 실패하지 않도록 방어적으로 구성합니다.
+    try{ calculateAll(); }catch(e){ console.error('report recalculation error',e); }
+
+    const age=reportNumber('currentAge',38), retire=reportNumber('retireAge',60), life=reportNumber('lifeExpectancy',90);
+    const pension = (typeof pensionType!=='undefined' && pensionType==='gov') ? '공무원·사학연금' : '국민연금';
+    const housing = reportValue('housingStatus','owner');
+    const housingLabel = housing==='owner' ? '현재 주택 보유' : housing==='never' ? '평생 무주택' : '향후 아파트 매수';
+    const total=reportText('kpi-totalWealthAtRetire','계산 확인 필요');
+    const net=reportText('kpi-netWealthAtRetire',total);
+    const coverage=reportText('kpi-coverageRatio','0%');
+    const depletion=reportText('kpi-depletionAge','-');
+    const target=reportText('kpi-targetExpenseText','-');
+    const fin=reportText('kpi-finWealthText','-');
+    const re=reportText('kpi-reWealthText','-');
+    const monthlySavings=reportNumber('monthlySavings',0);
+    const currentAssets=reportNumber('currentAssets',0);
+    const targetExpense=reportNumber('targetMonthlyExpense',0);
+    const inflation=reportNumber('inflationRate',0);
+    const weighted=reportText('calcWeightedReturn','-');
+    const portfolioTotal=reportText('totalPortfolioWeight','-');
+
+    const esc=v=>escapeHtml(v==null?'':v);
+    const fm=v=>formatMoney(Number.isFinite(Number(v))?Number(v):0);
+    const reportNumberFromText=v=>{
+      const n=Number(String(v??'').replace(/[^0-9.-]/g,''));
+      return Number.isFinite(n)?n:0;
+    };
+    const pctNum=v=>`${(Number(v)||0).toFixed(1)}%`;
+    const valueOf=id=>reportValue(id,'');
+    const textOf=id=>reportText(id,'');
+    const selectedText=id=>{const x=el(id);return x?.options?.[x.selectedIndex]?.text||valueOf(id)||'-';};
+
+    let pensionDetail='국민연금 기준으로 계산';
+    let pensionRows='';
+    if(pension==='공무원·사학연금'){
+      const job=selectedText('govJobGroup'), rank=selectedText('govRank'), step=valueOf('govStep')||'-';
+      pensionDetail=`${job} · ${rank} · ${step}호봉`;
+      pensionRows=`
+        <tr><td>직군</td><td class="num">${esc(job)}</td></tr>
+        <tr><td>직급·계급</td><td class="num">${esc(rank)}</td></tr>
+        <tr><td>현재 호봉</td><td class="num">${esc(step)}호봉</td></tr>
+        <tr><td>기여금 납부 기간</td><td class="num">${esc(valueOf('govYears'))}년</td></tr>
+        <tr><td>연평균 보수 인상률</td><td class="num">${esc(valueOf('govWageGrowth'))}%</td></tr>
+        <tr><td>2026 호봉 기본급</td><td class="num">${esc(textOf('calcGovBaseIncome')||'-')}</td></tr>
+        <tr><td>예상 평균 기준소득월액</td><td class="num">${esc(textOf('calcGovAvgIncome')||'-')}</td></tr>
+        <tr><td>기준소득월액 산출 설명</td><td class="num">${esc(textOf('govIncomeDetail')||'자동 추정')}</td></tr>`;
+    }else{
+      pensionDetail=`가입기간 ${valueOf('npsYears')||'-'}년 · 연금 개시 ${selectedText('npsStartAge')}세`;
+      pensionRows=`
+        <tr><td>B값(월 평균소득)</td><td class="num">${esc(textOf('display-npsIncome')||fm(valueOf('npsIncome')))}</td></tr>
+        <tr><td>총 예상 가입 기간</td><td class="num">${esc(valueOf('npsYears'))}년</td></tr>
+        <tr><td>연금 개시 연령</td><td class="num">${esc(selectedText('npsStartAge'))}</td></tr>`;
+    }
+
+    // 포트폴리오 상세
+    const portItems=[
+      ['snp','VOO · S&P500','slider-snp','weight-snp','return-snp'],
+      ['nasdaq','QQQM · NASDAQ 100','slider-nasdaq','weight-nasdaq','return-nasdaq'],
+      ['schd','SCHD · 미국배당다우존스','slider-schd','weight-schd','return-schd'],
+      ['gold','ACE KRX 금현물','slider-gold','weight-gold','return-gold'],
+      ['cash','예적금 / 국채 / 안전자산','slider-cash','weight-cash','return-cash'],
+      ['custom','직접 입력 투자상품','slider-custom','weight-custom',null]
+    ];
+    const portfolioRows=portItems.map(([key,label,sliderId,weightId,returnId])=>{
+      const w=portfolioWeights?.[key] ?? (Number(valueOf(sliderId)) || 0);
+      const ret=key==='custom' ? Number(valueOf('customReturn')||0) : Number(textOf(returnId).replace(/[^0-9.-]/g,'')) || 0;
+      return `<tr><td>${esc(label)}</td><td class="num">${w}%</td><td class="num">${ret.toFixed(2)}%</td></tr>`;
+    }).join('');
+
+    // 주택 상세
+    let housingSection='';
+    if(housing==='owner'){
+      const value=reportNumber('realEstateValue',0);
+      const growth=reportNumber('realEstateGrowthRate',0);
+      const action=selectedText('realEstateRetireAction');
+      const district=selectedText('realEstateDistrict');
+      const region=selectedText('realEstateRegion');
+      housingSection=`<div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏠 현재 보유 주택 상세</div>
+        <div class="wizard-report-section-sub">현재 주택의 평가액과 지역별 상승률 가정을 기준으로 은퇴 시 자산을 계산합니다.</div>
+        <table class="wizard-report-table">
+          <tr><td>소재 지역</td><td class="num">${esc(region)}${district&&district!=='해당 지역 전체'?` · ${esc(district)}`:''}</td></tr>
+          <tr><td>현재 주택 평가액</td><td class="num"><strong>${esc(fm(value))}</strong></td></tr>
+          <tr><td>연 예상 상승률</td><td class="num">${growth.toFixed(1)}%</td></tr>
+          <tr class="bg-rose-50"><td><strong>은퇴 시점 예상 주택가치</strong></td><td class="num"><strong>${esc(re)}</strong></td></tr>
+          <tr><td>은퇴 후 처리 방식</td><td class="num">${esc(action)}</td></tr>
+        </table></div>`;
+    }else if(housing==='none'){
+      const currentAgeX=reportNumber('currentAge',38);
+      const purchaseAge=reportNumber('homePurchaseAge',60);
+      const currentPrice=reportNumber('homePurchasePrice',0);
+      const inflRate=reportNumber('inflationRate',0)/100;
+      const purchasePrice=currentPrice*Math.pow(1+inflRate,Math.max(0,purchaseAge-currentAgeX));
+      const loanEnabled=valueOf('housingLoanEnabled')==='yes';
+      const ltv=Math.min(100,Math.max(0,reportNumber('housingLoanLTV',0)))/100;
+      const rate=reportNumber('housingLoanRate',0)/100;
+      const term=Math.max(1,reportNumber('housingLoanTerm',30));
+      const loanPrincipal=loanEnabled?purchasePrice*ltv:0;
+      const equity=Math.max(0,purchasePrice-loanPrincipal);
+      const monthlyPayment=loanPrincipal>0?(rate===0?loanPrincipal/(term*12):loanPrincipal*(rate/12)/(1-Math.pow(1+rate/12,-term*12))):0;
+      const timelineRet=window.latestWealthTimeline||[]; const retPoint=timelineRet.find(d=>d.age===reportNumber('retireAge',60)) || {}; const remainLoan=Number(retPoint.loanBalance)||0;
+      const loanSavings=reportNumber('housingLoanMonthlySavings',monthlySavings);
+      const region=selectedText('realEstateRegion');
+      const district=selectedText('realEstateDistrict');
+      const growth=reportNumber('realEstateGrowthRate',0);
+      housingSection=`<div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏠 무주택자 아파트 매수 계획 상세</div>
+        <div class="wizard-report-section-sub">현재 기준 가격을 매수 예정 시점까지 물가상승률로 환산한 뒤, 입력한 LTV로 주담대와 자기자금을 계산한 결과입니다.</div>
+        <table class="wizard-report-table">
+          <tr><td>매수 예정 연령</td><td class="num"><strong>${purchaseAge}세</strong></td></tr>
+          <tr><td>매수 지역</td><td class="num">${esc(region)}${district&&district!=='해당 지역 전체'?` · ${esc(district)}`:''}</td></tr>
+          <tr><td>지역 연 예상 상승률</td><td class="num">${growth.toFixed(1)}%</td></tr>
+          <tr><td>현재 기준 아파트 가격</td><td class="num"><strong>${esc(fm(currentPrice))}</strong></td></tr>
+          <tr class="bg-amber-50"><td><strong>매수 시점 예상 아파트 가격</strong></td><td class="num"><strong>${esc(fm(purchasePrice))}</strong></td></tr>
+          <tr><td>대출 사용</td><td class="num">${loanEnabled?'사용':'미사용'}</td></tr>
+          ${loanEnabled?`
+          <tr><td>대출 비율 (LTV)</td><td class="num">${reportNumber('housingLoanLTV',0).toFixed(0)}%</td></tr>
+          <tr><td>연 대출금리</td><td class="num">${(rate*100).toFixed(1)}%</td></tr>
+          <tr><td>상환 기간</td><td class="num">${term}년</td></tr>
+          <tr class="bg-amber-50"><td><strong>매수 시점 주담대 원금</strong></td><td class="num"><strong>${esc(fm(loanPrincipal))}</strong></td></tr>
+          <tr><td>매수 시 자기자금</td><td class="num"><strong>${esc(fm(equity))}</strong></td></tr>
+          <tr><td>주담대 월 원리금</td><td class="num"><strong>${esc(fm(monthlyPayment))}</strong></td></tr>
+          <tr><td>대출 상환 중 월 적립액</td><td class="num">${esc(fm(loanSavings))}</td></tr>
+          <tr><td>은퇴 시 잔존 대출</td><td class="num">${esc(fm(remainLoan))}</td></tr>`:
+          `<tr><td>매수 시 자기자금</td><td class="num"><strong>${esc(fm(equity))}</strong></td></tr>`}
+        </table>
+        <div class="wizard-summary"><strong>핵심:</strong> ${purchaseAge}세 매수 시점 예상 가격은 ${fm(purchasePrice)}이며, ${loanEnabled?`주담대 원금은 ${fm(loanPrincipal)}, 자기자금은 ${fm(equity)}입니다.`:'대출 없이 자기자금 '+fm(equity)+'이 필요합니다.'}</div>
+      </div>`;
+    }else{
+      housingSection=`<div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏠 주택 계획</div><div class="wizard-report-section-sub">평생 주택을 매수하지 않는 시나리오입니다. 주택자산과 주택매수 자금 이동은 계산하지 않습니다.</div></div>`;
+    }
+
+    const incomeRows=[['공적연금','tbl-publicCurrent','tbl-publicFuture','tbl-publicNetFuture','tbl-publicRatio'],['부동산 월세 / 주택연금','tbl-reCurrent','tbl-reFuture','tbl-reNetFuture','tbl-reRatio'],['배당금','tbl-dividendCurrent','tbl-dividendFuture','tbl-dividendNetFuture','tbl-dividendRatio'],['생활비 부족분 원금 인출','tbl-drawdownCurrent','tbl-drawdownFuture','tbl-drawdownNetFuture','tbl-drawdownRatio']];
+    const incomeTable=incomeRows.map(r=>`<tr><td>${r[0]}</td><td class="num">${esc(textOf(r[1])||'0 만원')}</td><td class="num">${esc(textOf(r[2])||'0 만원')}</td><td class="num"><strong>${esc(textOf(r[3])||'0 만원')}</strong></td><td class="num">${esc(textOf(r[4])||'0%')}</td></tr>`).join('');
+
+    const dividendMode=el('dividendMode')?.checked;
+    const dividendAlloc=reportNumber('dividendAllocation',0);
+    const dividendYield=reportNumber('dividendYield',0);
+    const dividendModeText=dividendMode?`은퇴 시 금융자산의 ${dividendAlloc}%를 연 ${dividendYield}% 배당형으로 전환`:'배당형 운용 OFF';
+
+    const recommendation=textOf('aiRecommendationText')||'현재 입력 조건에 대한 추가 진단 정보가 없습니다.';
+
+    // 은퇴 시점 자산 구성 원형그래프용 비중: 금융자산은 현재 적립 포트폴리오 비중을 적용한 추정치로 표시합니다.
+    const retireAgeNum=reportNumber('retireAge',60);
+    const timelineForMix=window.latestWealthTimeline||[];
+    const mixPoint=timelineForMix.find(d=>d.age===retireAgeNum) || timelineForMix.filter(d=>d.age<=retireAgeNum).slice(-1)[0] || {};
+    const finAtRetireNum=Math.max(0,Number(mixPoint.finWealth)||0);
+    const reAtRetireNum=Math.max(0,Number(mixPoint.reWealth)||0);
+    const grossTotal=Math.max(0,finAtRetireNum+reAtRetireNum);
+    const assetMixKeys=['snp','nasdaq','schd','gold','cash','custom','realEstate'];
+    const assetMixLabels=['VOO · S&P500','QQQM · NASDAQ100','SCHD','금 · ACE KRX금현물','안전자산','직접입력 상품','부동산'];
+    const assetMixWeights=assetMixKeys.map(k=>k==='realEstate'?reAtRetireNum:(finAtRetireNum*(Number(portfolioWeights?.[k]||0)/100)));
+    const assetMixPct=assetMixWeights.map(v=>grossTotal>0?(v/grossTotal*100):0);
+    const assetMixRows=assetMixLabels.map((label,i)=>`<tr><td>${esc(label)}</td><td class="num">${assetMixPct[i].toFixed(1)}%</td><td class="num">${esc(fm(assetMixWeights[i]))}</td></tr>`).join('');
+    const assetMixTop=assetMixPct.map((v,i)=>({label:assetMixLabels[i],pct:v})).filter(x=>x.pct>0.05).sort((a,b)=>b.pct-a.pct).slice(0,3);
+    const nameParts=`${age}세 · ${retire}세 은퇴 목표 · ${life}세까지 시뮬레이션`;
+
+    return `<div class="wizard-report-wrap wizard-report-detailed">
+      <div class="wizard-report-hero">
+        <div class="wizard-report-eyebrow">FINAL RETIREMENT REPORT · DETAILED</div>
+        <div class="wizard-report-hero-title">${esc(nameParts)}</div>
+        <div class="wizard-report-hero-sub">현재 입력값과 v26의 최신 계산 결과를 바탕으로 작성한 상세 노후자산 보고서입니다. 아래 내용은 시뮬레이션 가정에 따른 추정치입니다.</div>
+        <div class="wizard-report-grid">
+          <div class="wizard-report-kpi"><div class="wizard-report-kpi-label">은퇴 시점 총자산</div><div class="wizard-report-kpi-value">${esc(total)}</div><div class="wizard-report-kpi-note">금융자산 + 주택자산</div></div>
+          <div class="wizard-report-kpi"><div class="wizard-report-kpi-label">은퇴 시점 순자산</div><div class="wizard-report-kpi-value">${esc(net)}</div><div class="wizard-report-kpi-note">남은 주택대출 차감</div></div>
+          <div class="wizard-report-kpi"><div class="wizard-report-kpi-label">생활비 충족률</div><div class="wizard-report-kpi-value">${esc(coverage)}</div><div class="wizard-report-kpi-note">목표 ${esc(target)}</div></div>
+          <div class="wizard-report-kpi"><div class="wizard-report-kpi-label">금융자산 고갈</div><div class="wizard-report-kpi-value">${esc(depletion)}</div><div class="wizard-report-kpi-note">기대수명 ${life}세 기준</div></div>
+        </div>
+      </div>
+
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">📌 1. 나의 기본 설정</div><div class="wizard-report-section-sub">시뮬레이션에 입력한 핵심 전제입니다.</div>
+        <table class="wizard-report-table">
+          <tr><td>현재 연령</td><td class="num">${age}세</td></tr>
+          <tr><td>은퇴 목표 연령</td><td class="num">${retire}세</td></tr>
+          <tr><td>기대수명</td><td class="num">${life}세</td></tr>
+          <tr><td>현재 금융자산</td><td class="num"><strong>${esc(fm(currentAssets))}</strong></td></tr>
+          <tr><td>월 추가 적립·투자액</td><td class="num"><strong>${esc(fm(monthlySavings))}</strong></td></tr>
+          <tr><td>은퇴 후 목표 생활비</td><td class="num"><strong>${esc(fm(targetExpense))}/월</strong></td></tr>
+          <tr><td>물가상승률 가정</td><td class="num">${inflation.toFixed(1)}%</td></tr>
+          <tr><td>공적연금</td><td class="num">${esc(pension)} · ${esc(pensionDetail)}</td></tr>
+          <tr><td>주택 계획</td><td class="num"><span class="wizard-report-pill">${esc(housingLabel)}</span></td></tr>
+        </table>
+      </div>
+
+      <div class="wizard-final-chart-wrap wizard-report-break"><div class="wizard-final-chart-title">📈 2. 나의 자산 변화</div><div class="wizard-final-chart-sub">은퇴 전 적립과 투자, 은퇴 후 생활비 지출 및 자산 인출을 반영한 금융자산·부동산자산·순자산의 추이입니다.</div><div class="wizard-final-chart-canvas"><canvas id="wizardFinalChart"></canvas></div></div>
+
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">💰 3. 은퇴 시점 자산 구성</div><div class="wizard-report-section-sub">은퇴 목표 연령의 자산을 금융자산과 주택자산으로 나누어 확인합니다.</div>
+        <table class="wizard-report-table"><tr><th>항목</th><th class="num">예상 금액</th></tr><tr><td>금융자산</td><td class="num"><strong>${esc(fin)}</strong></td></tr><tr><td>주택자산</td><td class="num"><strong>${esc(re)}</strong></td></tr><tr><td>은퇴 시점 총자산</td><td class="num"><strong>${esc(total)}</strong></td></tr><tr><td>은퇴 시점 순자산</td><td class="num"><strong>${esc(net)}</strong></td></tr></table>
+      </div>
+
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🥧 4. 은퇴 시점 자산 비중</div><div class="wizard-report-section-sub">현재 설정한 적립 포트폴리오 비중을 은퇴 시점 금융자산에 적용한 <strong>추정 구성</strong>입니다. 부동산은 별도 자산으로 합산합니다.</div><div class="wizard-asset-mix-grid"><div class="wizard-final-chart-canvas"><canvas id="wizardAssetMixChart"></canvas></div><div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>자산</th><th class="num">비중</th><th class="num">추정 금액</th></tr>${assetMixRows}</table>${assetMixTop.length?`<div class="wizard-summary"><strong>비중이 큰 자산:</strong> ${assetMixTop.map(x=>`${esc(x.label)} ${x.pct.toFixed(1)}%`).join(' · ')}</div>`:''}</div></div></div>
+
+      ${housingSection}
+
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">📊 5. 은퇴 후 월 소득 상세</div><div class="wizard-report-section-sub">은퇴 목표 연령 기준으로 현재가치, 은퇴시점 명목가치, 세후 금액 및 비중을 비교합니다.</div><div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>소득 항목</th><th class="num">현재가치</th><th class="num">은퇴시점 세전</th><th class="num">세후</th><th class="num">비중</th></tr>${incomeTable}<tr><td><strong>은퇴 소득 총합계</strong></td><td class="num"><strong>${esc(textOf('tbl-totalCurrent')||'0 만원')}</strong></td><td class="num"><strong>${esc(textOf('tbl-totalFuture')||'0 만원')}</strong></td><td class="num"><strong>${esc(textOf('tbl-totalNetFuture')||'0 만원')}</strong></td><td class="num"><strong>100%</strong></td></tr><tr><td><strong>목표 대비 부족/여유액</strong></td><td class="num">${esc(textOf('tbl-gapCurrent')||'-')}</td><td class="num">${esc(textOf('tbl-gapFuture')||'-')}</td><td class="num">${esc(textOf('tbl-gapNetFuture')||'-')}</td><td class="num"><strong>${esc(textOf('tbl-gapBadge')||'-')}</strong></td></tr></table></div></div>
+
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏦 6. 적립·투자 포트폴리오 상세</div><div class="wizard-report-section-sub">현재 설정된 월 적립금의 상품별 비중과 적용 기대수익률입니다.</div>
+        <table class="wizard-report-table"><tr><th>상품</th><th class="num">비중</th><th class="num">적용 연수익률</th></tr>${portfolioRows}<tr class="bg-slate-50"><td><strong>포트폴리오 합계 / 실효수익률</strong></td><td class="num"><strong>${esc(portfolioTotal)}</strong></td><td class="num"><strong>${esc(weighted)}</strong></td></tr></table>
+        <div class="wizard-summary">배당·분배금 재투자: <strong>${el('dividendReinvest')?.checked?'ON':'OFF'}</strong> · ETF 운용보수 반영: <strong>${el('feeApply')?.checked?'ON':'OFF'}</strong></div>
+      </div>
+
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🪙 7. 은퇴 후 배당형 운용 설정</div><div class="wizard-report-section-sub">은퇴 시 금융자산의 일부를 배당형 상품으로 전환하는 현재 설정입니다.</div>
+        <table class="wizard-report-table"><tr><td>배당형 운용</td><td class="num">${dividendMode?'사용':'사용하지 않음'}</td></tr><tr><td>배당형 전환 비율</td><td class="num">${dividendAlloc}%</td></tr><tr><td>배당률</td><td class="num">${dividendYield.toFixed(1)}%</td></tr><tr><td>설정 요약</td><td class="num">${esc(dividendModeText)}</td></tr><tr><td>배당 세율 가정</td><td class="num">${esc(valueOf('dividendTaxRate'))}%</td></tr></table>
+      </div>
+
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏛️ 8. 공적연금 상세 설정</div><div class="wizard-report-section-sub">현재 선택한 연금 종류와 관련 입력값입니다.</div><table class="wizard-report-table"><tr><td>연금 종류</td><td class="num">${esc(pension)}</td></tr>${pensionRows}</table></div>
+
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🧾 9. 은퇴소득 세후 계산 가정</div><div class="wizard-report-section-sub">세금은 실제 신고·공제·소득구성에 따라 달라지므로 시뮬레이션용 가정입니다.</div><table class="wizard-report-table"><tr><td>공적연금 세율</td><td class="num">${esc(valueOf('pensionTaxRate'))}%</td></tr><tr><td>배당 세율</td><td class="num">${esc(valueOf('dividendTaxRate'))}%</td></tr><tr><td>부동산 소득 세율</td><td class="num">${esc(valueOf('realEstateTaxRate'))}%</td></tr></table></div>
+
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🧭 10. 종합 진단</div><div class="wizard-report-section-sub">v18에서 제공하던 통합 진단 영역을 상세보고서에 포함했습니다.</div><div class="text-xs text-slate-600 leading-relaxed mt-3">${recommendation}</div></div>
+
+      <div class="wizard-report-section"><div class="wizard-report-section-title">ℹ️ 보고서 해석 안내</div><div class="wizard-report-section-sub">이 보고서는 입력한 수익률·물가·주택상승률·연금·세율 등의 가정에 따라 계산된 추정 결과입니다. 실제 투자수익, 주택가격, 세금, 연금 수령액과는 차이가 날 수 있습니다.</div></div>
+      <div class="wizard-report-actions"><button class="wizard-btn back" onclick="wizardBackToEdit()">설정 다시 보기</button><button class="wizard-btn next" onclick="window.print()">상세 리포트 인쇄 / PDF</button></div>
+    </div>`;
+  }
+  let wizardFinalChart=null;
+  function renderWizardFinalChart(){
+    const canvas=el('wizardFinalChart');
+    const timeline=window.latestWealthTimeline||[];
+    if(!canvas||!timeline.length||typeof Chart==='undefined') return;
+    if(wizardFinalChart){ try{wizardFinalChart.destroy();}catch(e){} }
+    wizardFinalChart=new Chart(canvas.getContext('2d'),{
+      type:'line',
+      data:{
+        labels:timeline.map(d=>`${d.age}세`),
+        datasets:[
+          {label:'금융자산',data:timeline.map(d=>Math.round(d.finWealth)),borderColor:'#2563eb',backgroundColor:'rgba(37,99,235,.12)',fill:true,tension:.2,borderWidth:2.5},
+          {label:'부동산자산',data:timeline.map(d=>Math.round(d.reWealth)),borderColor:'#e11d48',backgroundColor:'rgba(225,29,72,.06)',fill:true,tension:.2,borderWidth:2,borderDash:[4,4]},
+          {label:'순자산',data:timeline.map(d=>Math.round(d.netWealth)),borderColor:'#0f172a',backgroundColor:'transparent',fill:false,tension:.2,borderWidth:2}
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{position:'top'},tooltip:{callbacks:{label:function(context){return ` ${context.dataset.label}: ${formatMoney(context.raw)}`;}}}},scales:{y:{ticks:{callback:function(v){return v>=10000?`${(v/10000).toFixed(1)}억원`:`${v.toLocaleString()}만원`;}}},x:{grid:{display:false}}}}
+    });
+  }
+
+  function renderWizardAssetMixChart(){
+    const canvas=el('wizardAssetMixChart');
+    if(!canvas || typeof Chart==='undefined') return;
+    const finNum=(function(){ const x=el('kpi-finWealthText')?.textContent||''; const n=Number(String(x).replace(/[^0-9.-]/g,'')); return Number.isFinite(n)?n:0; })();
+    const reNum=(function(){ const x=el('kpi-reWealthText')?.textContent||''; const n=Number(String(x).replace(/[^0-9.-]/g,'')); return Number.isFinite(n)?n:0; })();
+    const keys=['snp','nasdaq','schd','gold','cash','custom'];
+    const labels=['VOO · S&P500','QQQM · NASDAQ100','SCHD','금 · ACE KRX금현물','안전자산','직접입력 상품'];
+    const vals=keys.map(k=>finNum*(Number(portfolioWeights?.[k]||0)/100));
+    vals.push(reNum); labels.push('부동산');
+    const cleaned=vals.map(v=>Math.max(0,v));
+    const total=cleaned.reduce((a,b)=>a+b,0);
+    if(total<=0) return;
+    const filteredLabels=[],filteredVals=[];
+    cleaned.forEach((v,i)=>{ if(v>0){ filteredLabels.push(labels[i]); filteredVals.push(Math.round(v)); } });
+    if(window.wizardAssetMixChart){ try{window.wizardAssetMixChart.destroy();}catch(e){} }
+    window.wizardAssetMixChart=new Chart(canvas.getContext('2d'),{
+      type:'doughnut',
+      data:{labels:filteredLabels,datasets:[{data:filteredVals,borderWidth:2,borderColor:'#ffffff',backgroundColor:['#2563eb','#7c3aed','#059669','#f59e0b','#64748b','#db2777','#e11d48'].slice(0,filteredVals.length)}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom'},tooltip:{callbacks:{label:function(context){const sum=context.dataset.data.reduce((a,b)=>a+b,0); const pct=sum?(context.raw/sum*100):0; return ` ${context.label}: ${formatMoney(context.raw)} · ${pct.toFixed(1)}%`;}}}}}
+    });
+  }
+  window.wizardAssetMixChart=null;
+
+  window.buildDetailedWizardReport=buildDetailedWizardReport;
+  window.renderWizardFinalChart=renderWizardFinalChart;
+  window.renderWizardAssetMixChart=renderWizardAssetMixChart;
+  let detailedReportOpening=false;
+  window.wizardOpenFullReport=function(){
+    if(detailedReportOpening) return false;
+    detailedReportOpening=true;
+    const card=document.getElementById('wizardReportCard');
+    const body=card?.querySelector('.wizard-body');
+    if(!card||!body){ detailedReportOpening=false; return false; }
+    card.classList.remove('hidden');
+    try{
+      const html=window.buildDetailedWizardReport();
+      if(!html || typeof html!=='string') throw new Error('상세보고서 HTML 생성 결과가 비어 있습니다.');
+      body.innerHTML=html;
+      const rec=document.getElementById('wizardDetailedRecommendation');
+      const src=document.getElementById('aiRecommendationText');
+      if(rec) rec.innerHTML=(src && src.innerHTML) ? src.innerHTML : '현재 입력 조건에 대한 추가 진단 정보가 없습니다.';
+      try{ window.renderWizardFinalChart(); }catch(chartErr){ console.warn('Final report chart render skipped:',chartErr); }
+      try{ window.renderWizardAssetMixChart(); }catch(mixErr){ console.warn('Asset mix chart render skipped:',mixErr); }
+      if(window.lucide) lucide.createIcons();
+      window.scrollTo(0,0);
+      return true;
+    }catch(err){
+      console.error('Final report error:',err);
+      const safeTotal=el('kpi-totalWealthAtRetire')?.textContent||'계산 확인 필요';
+      const safeNet=el('kpi-netWealthAtRetire')?.textContent||safeTotal;
+      const safeCoverage=el('kpi-coverageRatio')?.textContent||'0%';
+      body.innerHTML=`<div class="wizard-report-wrap"><div class="wizard-report-hero"><div class="wizard-report-eyebrow">FINAL RETIREMENT REPORT</div><div class="wizard-report-hero-title">나의 노후 자산 상세보고서</div><div class="wizard-report-hero-sub">입력하신 조건으로 계산된 핵심 결과를 표시합니다.</div><div class="wizard-report-grid"><div class="wizard-report-kpi"><div class="wizard-report-kpi-label">은퇴 시점 총자산</div><div class="wizard-report-kpi-value">${escapeHtml(safeTotal)}</div></div><div class="wizard-report-kpi"><div class="wizard-report-kpi-label">은퇴 시점 순자산</div><div class="wizard-report-kpi-value">${escapeHtml(safeNet)}</div></div><div class="wizard-report-kpi"><div class="wizard-report-kpi-label">생활비 충족률</div><div class="wizard-report-kpi-value">${escapeHtml(safeCoverage)}</div></div></div></div><div class="wizard-report-section"><div class="wizard-report-section-title">입력 조건을 기준으로 계산된 요약</div><div class="wizard-report-section-sub">상세 표 일부 생성에 문제가 있었지만 핵심 계산 결과는 유지됩니다.</div></div><div class="wizard-report-actions"><button class="wizard-btn back" onclick="wizardBackToEdit()">설정 다시 보기</button><button class="wizard-btn next" onclick="window.print()">리포트 인쇄 / PDF</button></div></div>`;
+      return true;
+    }finally{ detailedReportOpening=false; }
+  };
+  window.__openRetirementDetailedReport=function(){ return window.wizardOpenFullReport(); };
+  window.wizardBackToEdit=function(){
+    document.body.classList.add('wizard-active');
+    el('wizardReportCard').classList.add('hidden');el('wizardCard').classList.remove('hidden');
+    setStepUI();
+  };
+
+  // 최초 로드 후 wizard가 기본 화면을 장악하도록 합니다.
+  document.addEventListener('DOMContentLoaded',function(){
+    if(window.lucide) lucide.createIcons();
+    try{initInputs();populateRealEstateDistricts();onRealEstateDistrictChange();onGovGroupChange();updatePortfolioDisplay();calculateAll();}catch(e){}
+  });
+})();
+</script>
+
+</body>
+</html>
