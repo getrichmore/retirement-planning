@@ -398,18 +398,59 @@
             line-height:1.45;
         }
         .wizard-report-table {
-            min-width:620px;
-            font-size:10px;
+            width:100%;
+            table-layout:auto;
+            font-size:10.5px;
         }
         .wizard-report-section .overflow-x-auto {
             -webkit-overflow-scrolling:touch;
-            margin:0 -12px;
-            padding:0 12px;
             position:relative;
         }
         .wizard-report-table th,
         .wizard-report-table td {
             padding:7px 6px;
+            word-break:keep-all;
+        }
+        .wizard-report-table td:first-child,
+        .wizard-report-table th:first-child {
+            max-width:56%;
+        }
+        /* 열이 3개 이상인 표(포트폴리오/자산비중/소득상세)는 스크롤 대신
+           행마다 '라벨: 값' 카드 형태로 쌓아서 화면 폭 안에서 바로 보이게 함 */
+        .wizard-report-table.stack-mobile { min-width:0; }
+        .wizard-report-table.stack-mobile thead { display:none; }
+        .wizard-report-table.stack-mobile,
+        .wizard-report-table.stack-mobile tbody,
+        .wizard-report-table.stack-mobile tr,
+        .wizard-report-table.stack-mobile td {
+            display:block;
+            width:100%;
+        }
+        .wizard-report-table.stack-mobile tr {
+            padding:10px 2px;
+            border-bottom:1px solid #f1f5f9;
+        }
+        .wizard-report-table.stack-mobile tr:last-child { border-bottom:none; }
+        .wizard-report-table.stack-mobile td {
+            display:flex;
+            justify-content:space-between;
+            align-items:baseline;
+            padding:2px 0;
+            text-align:left;
+        }
+        .wizard-report-table.stack-mobile td:first-child {
+            font-weight:900;
+            font-size:12px;
+            color:#0f172a;
+            padding-bottom:6px;
+        }
+        .wizard-report-table.stack-mobile td[data-label]::before {
+            content: attr(data-label);
+            font-weight:700;
+            color:#94a3b8;
+            font-size:10px;
+            margin-right:10px;
+            flex-shrink:0;
         }
         .wizard-report-actions {
             flex-direction:column;
@@ -2488,7 +2529,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     const portfolioRows=portItems.map(([key,label,sliderId,weightId,returnId])=>{
       const w=portfolioWeights?.[key] ?? (Number(valueOf(sliderId)) || 0);
       const ret=key==='custom' ? Number(valueOf('customReturn')||0) : Number(textOf(returnId).replace(/[^0-9.-]/g,'')) || 0;
-      return `<tr><td>${esc(label)}</td><td class="num">${w}%</td><td class="num">${ret.toFixed(2)}%</td></tr>`;
+      return `<tr><td>${esc(label)}</td><td class="num" data-label="비중">${w}%</td><td class="num" data-label="연수익률">${ret.toFixed(2)}%</td></tr>`;
     }).join('');
 
     // 주택 상세
@@ -2553,7 +2594,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     }
 
     const incomeRows=[['공적연금','tbl-publicCurrent','tbl-publicFuture','tbl-publicNetFuture','tbl-publicRatio'],['부동산 월세 / 주택연금','tbl-reCurrent','tbl-reFuture','tbl-reNetFuture','tbl-reRatio'],['배당금','tbl-dividendCurrent','tbl-dividendFuture','tbl-dividendNetFuture','tbl-dividendRatio'],['생활비 부족분 원금 인출','tbl-drawdownCurrent','tbl-drawdownFuture','tbl-drawdownNetFuture','tbl-drawdownRatio']];
-    const incomeTable=incomeRows.map(r=>`<tr><td>${r[0]}</td><td class="num">${esc(textOf(r[1])||'0 만원')}</td><td class="num">${esc(textOf(r[2])||'0 만원')}</td><td class="num"><strong>${esc(textOf(r[3])||'0 만원')}</strong></td><td class="num">${esc(textOf(r[4])||'0%')}</td></tr>`).join('');
+    const incomeTable=incomeRows.map(r=>`<tr><td>${r[0]}</td><td class="num" data-label="현재가치">${esc(textOf(r[1])||'0 만원')}</td><td class="num" data-label="은퇴시점 세전">${esc(textOf(r[2])||'0 만원')}</td><td class="num" data-label="세후"><strong>${esc(textOf(r[3])||'0 만원')}</strong></td><td class="num" data-label="비중">${esc(textOf(r[4])||'0%')}</td></tr>`).join('');
 
     const dividendMode=el('dividendMode')?.checked;
     const dividendAlloc=reportNumber('dividendAllocation',0);
@@ -2573,7 +2614,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     const assetMixLabels=['VOO · S&P500','QQQM · NASDAQ100','SCHD','금 · ACE KRX금현물','안전자산','직접입력 상품','부동산'];
     const assetMixWeights=assetMixKeys.map(k=>k==='realEstate'?reAtRetireNum:(finAtRetireNum*(Number(portfolioWeights?.[k]||0)/100)));
     const assetMixPct=assetMixWeights.map(v=>grossTotal>0?(v/grossTotal*100):0);
-    const assetMixRows=assetMixLabels.map((label,i)=>`<tr><td>${esc(label)}</td><td class="num">${assetMixPct[i].toFixed(1)}%</td><td class="num">${esc(fm(assetMixWeights[i]))}</td></tr>`).join('');
+    const assetMixRows=assetMixLabels.map((label,i)=>`<tr><td>${esc(label)}</td><td class="num" data-label="비중">${assetMixPct[i].toFixed(1)}%</td><td class="num" data-label="추정 금액">${esc(fm(assetMixWeights[i]))}</td></tr>`).join('');
     const assetMixTop=assetMixPct.map((v,i)=>({label:assetMixLabels[i],pct:v})).filter(x=>x.pct>0.05).sort((a,b)=>b.pct-a.pct).slice(0,3);
     const nameParts=`${age}세 · ${retire}세 은퇴 목표 · ${life}세까지 시뮬레이션`;
 
@@ -2610,14 +2651,14 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
         <div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>항목</th><th class="num">예상 금액</th></tr><tr><td>금융자산</td><td class="num"><strong>${esc(fin)}</strong></td></tr><tr><td>주택자산</td><td class="num"><strong>${esc(re)}</strong></td></tr><tr><td>은퇴 시점 총자산</td><td class="num"><strong>${esc(total)}</strong></td></tr><tr><td>은퇴 시점 순자산</td><td class="num"><strong>${esc(net)}</strong></td></tr></table></div>
       </div>
 
-      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🥧 4. 은퇴 시점 자산 비중</div><div class="wizard-report-section-sub">현재 설정한 적립 포트폴리오 비중을 은퇴 시점 금융자산에 적용한 <strong>추정 구성</strong>입니다. 부동산은 별도 자산으로 합산합니다.</div><div class="wizard-asset-mix-grid"><div class="wizard-final-chart-canvas"><canvas id="wizardAssetMixChart"></canvas></div><div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>자산</th><th class="num">비중</th><th class="num">추정 금액</th></tr>${assetMixRows}</table>${assetMixTop.length?`<div class="wizard-summary"><strong>비중이 큰 자산:</strong> ${assetMixTop.map(x=>`${esc(x.label)} ${x.pct.toFixed(1)}%`).join(' · ')}</div>`:''}</div></div></div>
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🥧 4. 은퇴 시점 자산 비중</div><div class="wizard-report-section-sub">현재 설정한 적립 포트폴리오 비중을 은퇴 시점 금융자산에 적용한 <strong>추정 구성</strong>입니다. 부동산은 별도 자산으로 합산합니다.</div><div class="wizard-asset-mix-grid"><div class="wizard-final-chart-canvas"><canvas id="wizardAssetMixChart"></canvas></div><div class="overflow-x-auto"><table class="wizard-report-table stack-mobile"><tr><th>자산</th><th class="num">비중</th><th class="num">추정 금액</th></tr>${assetMixRows}</table>${assetMixTop.length?`<div class="wizard-summary"><strong>비중이 큰 자산:</strong> ${assetMixTop.map(x=>`${esc(x.label)} ${x.pct.toFixed(1)}%`).join(' · ')}</div>`:''}</div></div></div>
 
       ${housingSection}
 
-      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">📊 5. 은퇴 후 월 소득 상세</div><div class="wizard-report-section-sub">은퇴 목표 연령 기준으로 현재가치, 은퇴시점 명목가치, 세후 금액 및 비중을 비교합니다.</div><div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>소득 항목</th><th class="num">현재가치</th><th class="num">은퇴시점 세전</th><th class="num">세후</th><th class="num">비중</th></tr>${incomeTable}<tr><td><strong>은퇴 소득 총합계</strong></td><td class="num"><strong>${esc(textOf('tbl-totalCurrent')||'0 만원')}</strong></td><td class="num"><strong>${esc(textOf('tbl-totalFuture')||'0 만원')}</strong></td><td class="num"><strong>${esc(textOf('tbl-totalNetFuture')||'0 만원')}</strong></td><td class="num"><strong>100%</strong></td></tr><tr><td><strong>목표 대비 부족/여유액</strong></td><td class="num">${esc(textOf('tbl-gapCurrent')||'-')}</td><td class="num">${esc(textOf('tbl-gapFuture')||'-')}</td><td class="num">${esc(textOf('tbl-gapNetFuture')||'-')}</td><td class="num"><strong>${esc(textOf('tbl-gapBadge')||'-')}</strong></td></tr></table></div></div>
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">📊 5. 은퇴 후 월 소득 상세</div><div class="wizard-report-section-sub">은퇴 목표 연령 기준으로 현재가치, 은퇴시점 명목가치, 세후 금액 및 비중을 비교합니다.</div><div class="overflow-x-auto"><table class="wizard-report-table stack-mobile"><tr><th>소득 항목</th><th class="num">현재가치</th><th class="num">은퇴시점 세전</th><th class="num">세후</th><th class="num">비중</th></tr>${incomeTable}<tr><td><strong>은퇴 소득 총합계</strong></td><td class="num" data-label="현재가치"><strong>${esc(textOf('tbl-totalCurrent')||'0 만원')}</strong></td><td class="num" data-label="은퇴시점 세전"><strong>${esc(textOf('tbl-totalFuture')||'0 만원')}</strong></td><td class="num" data-label="세후"><strong>${esc(textOf('tbl-totalNetFuture')||'0 만원')}</strong></td><td class="num" data-label="비중"><strong>100%</strong></td></tr><tr><td><strong>목표 대비 부족/여유액</strong></td><td class="num" data-label="현재가치">${esc(textOf('tbl-gapCurrent')||'-')}</td><td class="num" data-label="은퇴시점 세전">${esc(textOf('tbl-gapFuture')||'-')}</td><td class="num" data-label="세후">${esc(textOf('tbl-gapNetFuture')||'-')}</td><td class="num" data-label="비중"><strong>${esc(textOf('tbl-gapBadge')||'-')}</strong></td></tr></table></div></div>
 
       <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏦 6. 적립·투자 포트폴리오 상세</div><div class="wizard-report-section-sub">현재 설정된 월 적립금의 상품별 비중과 적용 기대수익률입니다.</div>
-        <div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>상품</th><th class="num">비중</th><th class="num">적용 연수익률</th></tr>${portfolioRows}<tr class="bg-slate-50"><td><strong>포트폴리오 합계 / 실효수익률</strong></td><td class="num"><strong>${esc(portfolioTotal)}</strong></td><td class="num"><strong>${esc(weighted)}</strong></td></tr></table></div>
+        <div class="overflow-x-auto"><table class="wizard-report-table stack-mobile"><tr><th>상품</th><th class="num">비중</th><th class="num">적용 연수익률</th></tr>${portfolioRows}<tr class="bg-slate-50"><td><strong>포트폴리오 합계 / 실효수익률</strong></td><td class="num" data-label="비중"><strong>${esc(portfolioTotal)}</strong></td><td class="num" data-label="연수익률"><strong>${esc(weighted)}</strong></td></tr></table></div>
         <div class="wizard-summary">배당·분배금 재투자: <strong>${el('dividendReinvest')?.checked?'ON':'OFF'}</strong> · ETF 운용보수 반영: <strong>${el('feeApply')?.checked?'ON':'OFF'}</strong></div>
       </div>
 
