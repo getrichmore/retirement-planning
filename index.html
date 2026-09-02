@@ -3008,24 +3008,37 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     const SHARE_TITLE='노후 자산 시뮬레이션';
     const SHARE_TEXT='몇 가지 질문에 답하면 내 노후 자산이 얼마나 준비되어 있는지 확인할 수 있어요.';
 
-    // 카카오톡 공유는 가장 단순한 "웹 링크가 있는 텍스트 템플릿"으로 발송합니다.
-    // 피드 템플릿의 버튼만 클릭되지 않는 환경에서도 메시지 전체가 웹 링크를 갖도록 합니다.
-    if(window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized() && window.Kakao.Share){
-      try{
-        window.Kakao.Share.sendDefault({
-          objectType:'text',
-          text:`${SHARE_TITLE}\n${SHARE_TEXT}\n\n${SHARE_URL}`,
+    // 카카오 공식 기본 템플릿인 FEED 방식으로 공유합니다.
+  // 콘텐츠 영역과 하단 버튼 모두 동일한 웹 링크를 사용하여 PC/모바일 카카오톡에서 열리도록 합니다.
+  if(window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized() && window.Kakao.Share){
+    try{
+      window.Kakao.Share.sendDefault({
+        objectType:'feed',
+        content:{
+          title:SHARE_TITLE,
+          description:'몇 가지 질문에 답하면 내 노후 자산이 얼마나 준비되어 있는지 확인할 수 있어요.',
+          imageUrl:'https://getrichmore.github.io/retirement-planning/main.png',
           link:{
             mobileWebUrl:SHARE_URL,
             webUrl:SHARE_URL
           }
-        });
-        wizardUnlockReportBtn();
-        return false;
-      }catch(e){
-        console.warn('카카오 공유 SDK 실패, 기본 공유로 대체합니다:',e);
-      }
+        },
+        buttons:[
+          {
+            title:'웹사이트 바로가기',
+            link:{
+              mobileWebUrl:SHARE_URL,
+              webUrl:SHARE_URL
+            }
+          }
+        ]
+      });
+      wizardUnlockReportBtn();
+      return false;
+    }catch(e){
+      console.warn('카카오 공유 SDK 실패, 기본 공유로 대체합니다:',e);
     }
+  }
 
     if(navigator.share){
       navigator.share({title:SHARE_TITLE,text:SHARE_TEXT,url:SHARE_URL})
@@ -3088,23 +3101,27 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     // 광고 영역은 요청하신 원본 KAS 마크업(display:none)을 그대로 유지하고,
     // 모달을 연 뒤 KAS 스크립트를 한 번 더 로드하여 동적 영역도 처리하게 합니다.
     try{
-      const ad=gate.querySelector('.kakao_ad_area');
-      if(ad){
+      // 모달을 열 때마다 게이트 전용 광고 영역을 새로 만들고, 사용자가 요청한
+      // AdFit 광고 단위/크기를 그대로 삽입합니다.
+      const adWrap=gate.querySelector('.wizard-ad-gate-ad');
+      if(adWrap){
+        adWrap.innerHTML='';
+        const ad=document.createElement('ins');
+        ad.className='kakao_ad_area';
         ad.style.display='none';
-        ad.removeAttribute('data-kas-loaded');
+        ad.setAttribute('data-ad-unit','DAN-GsatUiV5i8mPlgYt');
+        ad.setAttribute('data-ad-width','300');
+        ad.setAttribute('data-ad-height','250');
+        adWrap.appendChild(ad);
       }
-      setTimeout(()=>{
-        try{
-          const oldScripts=document.querySelectorAll('script[data-wizard-adfit-gate]');
-          oldScripts.forEach(x=>x.remove());
-          const script=document.createElement('script');
-          script.type='text/javascript';
-          script.src='//t1.kakaocdn.net/kas/static/ba.min.js';
-          script.async=true;
-          script.setAttribute('data-wizard-adfit-gate','true');
-          document.body.appendChild(script);
-        }catch(reloadErr){ console.warn('애드핏 재호출 실패:',reloadErr); }
-      },80);
+      const oldScripts=document.querySelectorAll('script[data-wizard-adfit-gate]');
+      oldScripts.forEach(x=>x.remove());
+      const script=document.createElement('script');
+      script.type='text/javascript';
+      script.src='//t1.kakaocdn.net/kas/static/ba.min.js';
+      script.async=true;
+      script.setAttribute('data-wizard-adfit-gate','true');
+      document.body.appendChild(script);
     }catch(e){ console.warn('애드핏 영역 초기화 실패:',e); }
 
     if(wizardAdGateTimer) clearInterval(wizardAdGateTimer);
@@ -3207,7 +3224,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     if(window.lucide) lucide.createIcons();
     try{
       if(window.Kakao && !window.Kakao.isInitialized()){
-        window.Kakao.init('e1fe6c2366a8b69cf8f635f59a552de6');
+        window.Kakao.init('eab2349631cf3889f5807ed4ecd6a1a0');
       }
     }catch(e){ console.warn('카카오 SDK 초기화 실패:', e); }
     try{initInputs();populateRealEstateDistricts();onRealEstateDistrictChange();onGovGroupChange();updatePortfolioDisplay();calculateAll();}catch(e){}
