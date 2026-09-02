@@ -401,6 +401,12 @@
             min-width:620px;
             font-size:10px;
         }
+        .wizard-report-section .overflow-x-auto {
+            -webkit-overflow-scrolling:touch;
+            margin:0 -12px;
+            padding:0 12px;
+            position:relative;
+        }
         .wizard-report-table th,
         .wizard-report-table td {
             padding:7px 6px;
@@ -2495,13 +2501,13 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       const region=selectedText('realEstateRegion');
       housingSection=`<div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏠 현재 보유 주택 상세</div>
         <div class="wizard-report-section-sub">현재 주택의 평가액과 지역별 상승률 가정을 기준으로 은퇴 시 자산을 계산합니다.</div>
-        <table class="wizard-report-table">
+        <div class="overflow-x-auto"><table class="wizard-report-table">
           <tr><td>소재 지역</td><td class="num">${esc(region)}${district&&district!=='해당 지역 전체'?` · ${esc(district)}`:''}</td></tr>
           <tr><td>현재 주택 평가액</td><td class="num"><strong>${esc(fm(value))}</strong></td></tr>
           <tr><td>연 예상 상승률</td><td class="num">${growth.toFixed(1)}%</td></tr>
           <tr class="bg-rose-50"><td><strong>은퇴 시점 예상 주택가치</strong></td><td class="num"><strong>${esc(re)}</strong></td></tr>
           <tr><td>은퇴 후 처리 방식</td><td class="num">${esc(action)}</td></tr>
-        </table></div>`;
+        </table></div></div>`;
     }else if(housing==='none'){
       const currentAgeX=reportNumber('currentAge',38);
       const purchaseAge=reportNumber('homePurchaseAge',60);
@@ -2522,7 +2528,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       const growth=reportNumber('realEstateGrowthRate',0);
       housingSection=`<div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏠 무주택자 아파트 매수 계획 상세</div>
         <div class="wizard-report-section-sub">현재 기준 가격을 매수 예정 시점까지 물가상승률로 환산한 뒤, 입력한 LTV로 주담대와 자기자금을 계산한 결과입니다.</div>
-        <table class="wizard-report-table">
+        <div class="overflow-x-auto"><table class="wizard-report-table">
           <tr><td>매수 예정 연령</td><td class="num"><strong>${purchaseAge}세</strong></td></tr>
           <tr><td>매수 지역</td><td class="num">${esc(region)}${district&&district!=='해당 지역 전체'?` · ${esc(district)}`:''}</td></tr>
           <tr><td>지역 연 예상 상승률</td><td class="num">${growth.toFixed(1)}%</td></tr>
@@ -2539,7 +2545,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
           <tr><td>대출 상환 중 월 적립액</td><td class="num">${esc(fm(loanSavings))}</td></tr>
           <tr><td>은퇴 시 잔존 대출</td><td class="num">${esc(fm(remainLoan))}</td></tr>`:
           `<tr><td>매수 시 자기자금</td><td class="num"><strong>${esc(fm(equity))}</strong></td></tr>`}
-        </table>
+        </table></div>
         <div class="wizard-summary"><strong>핵심:</strong> ${purchaseAge}세 매수 시점 예상 가격은 ${fm(purchasePrice)}이며, ${loanEnabled?`주담대 원금은 ${fm(loanPrincipal)}, 자기자금은 ${fm(equity)}입니다.`:'대출 없이 자기자금 '+fm(equity)+'이 필요합니다.'}</div>
       </div>`;
     }else{
@@ -2585,7 +2591,7 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       </div>
 
       <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">📌 1. 나의 기본 설정</div><div class="wizard-report-section-sub">시뮬레이션에 입력한 핵심 전제입니다.</div>
-        <table class="wizard-report-table">
+        <div class="overflow-x-auto"><table class="wizard-report-table">
           <tr><td>현재 연령</td><td class="num">${age}세</td></tr>
           <tr><td>은퇴 목표 연령</td><td class="num">${retire}세</td></tr>
           <tr><td>기대수명</td><td class="num">${life}세</td></tr>
@@ -2595,13 +2601,13 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
           <tr><td>물가상승률 가정</td><td class="num">${inflation.toFixed(1)}%</td></tr>
           <tr><td>공적연금</td><td class="num">${esc(pension)} · ${esc(pensionDetail)}</td></tr>
           <tr><td>주택 계획</td><td class="num"><span class="wizard-report-pill">${esc(housingLabel)}</span></td></tr>
-        </table>
+        </table></div>
       </div>
 
       <div class="wizard-final-chart-wrap wizard-report-break"><div class="wizard-final-chart-title">📈 2. 나의 자산 변화</div><div class="wizard-final-chart-sub">은퇴 전 적립과 투자, 은퇴 후 생활비 지출 및 자산 인출을 반영한 금융자산·부동산자산·순자산의 추이입니다.</div><div class="wizard-final-chart-canvas"><canvas id="wizardFinalChart"></canvas></div></div>
 
       <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">💰 3. 은퇴 시점 자산 구성</div><div class="wizard-report-section-sub">은퇴 목표 연령의 자산을 금융자산과 주택자산으로 나누어 확인합니다.</div>
-        <table class="wizard-report-table"><tr><th>항목</th><th class="num">예상 금액</th></tr><tr><td>금융자산</td><td class="num"><strong>${esc(fin)}</strong></td></tr><tr><td>주택자산</td><td class="num"><strong>${esc(re)}</strong></td></tr><tr><td>은퇴 시점 총자산</td><td class="num"><strong>${esc(total)}</strong></td></tr><tr><td>은퇴 시점 순자산</td><td class="num"><strong>${esc(net)}</strong></td></tr></table>
+        <div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>항목</th><th class="num">예상 금액</th></tr><tr><td>금융자산</td><td class="num"><strong>${esc(fin)}</strong></td></tr><tr><td>주택자산</td><td class="num"><strong>${esc(re)}</strong></td></tr><tr><td>은퇴 시점 총자산</td><td class="num"><strong>${esc(total)}</strong></td></tr><tr><td>은퇴 시점 순자산</td><td class="num"><strong>${esc(net)}</strong></td></tr></table></div>
       </div>
 
       <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🥧 4. 은퇴 시점 자산 비중</div><div class="wizard-report-section-sub">현재 설정한 적립 포트폴리오 비중을 은퇴 시점 금융자산에 적용한 <strong>추정 구성</strong>입니다. 부동산은 별도 자산으로 합산합니다.</div><div class="wizard-asset-mix-grid"><div class="wizard-final-chart-canvas"><canvas id="wizardAssetMixChart"></canvas></div><div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>자산</th><th class="num">비중</th><th class="num">추정 금액</th></tr>${assetMixRows}</table>${assetMixTop.length?`<div class="wizard-summary"><strong>비중이 큰 자산:</strong> ${assetMixTop.map(x=>`${esc(x.label)} ${x.pct.toFixed(1)}%`).join(' · ')}</div>`:''}</div></div></div>
@@ -2611,17 +2617,17 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">📊 5. 은퇴 후 월 소득 상세</div><div class="wizard-report-section-sub">은퇴 목표 연령 기준으로 현재가치, 은퇴시점 명목가치, 세후 금액 및 비중을 비교합니다.</div><div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>소득 항목</th><th class="num">현재가치</th><th class="num">은퇴시점 세전</th><th class="num">세후</th><th class="num">비중</th></tr>${incomeTable}<tr><td><strong>은퇴 소득 총합계</strong></td><td class="num"><strong>${esc(textOf('tbl-totalCurrent')||'0 만원')}</strong></td><td class="num"><strong>${esc(textOf('tbl-totalFuture')||'0 만원')}</strong></td><td class="num"><strong>${esc(textOf('tbl-totalNetFuture')||'0 만원')}</strong></td><td class="num"><strong>100%</strong></td></tr><tr><td><strong>목표 대비 부족/여유액</strong></td><td class="num">${esc(textOf('tbl-gapCurrent')||'-')}</td><td class="num">${esc(textOf('tbl-gapFuture')||'-')}</td><td class="num">${esc(textOf('tbl-gapNetFuture')||'-')}</td><td class="num"><strong>${esc(textOf('tbl-gapBadge')||'-')}</strong></td></tr></table></div></div>
 
       <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏦 6. 적립·투자 포트폴리오 상세</div><div class="wizard-report-section-sub">현재 설정된 월 적립금의 상품별 비중과 적용 기대수익률입니다.</div>
-        <table class="wizard-report-table"><tr><th>상품</th><th class="num">비중</th><th class="num">적용 연수익률</th></tr>${portfolioRows}<tr class="bg-slate-50"><td><strong>포트폴리오 합계 / 실효수익률</strong></td><td class="num"><strong>${esc(portfolioTotal)}</strong></td><td class="num"><strong>${esc(weighted)}</strong></td></tr></table>
+        <div class="overflow-x-auto"><table class="wizard-report-table"><tr><th>상품</th><th class="num">비중</th><th class="num">적용 연수익률</th></tr>${portfolioRows}<tr class="bg-slate-50"><td><strong>포트폴리오 합계 / 실효수익률</strong></td><td class="num"><strong>${esc(portfolioTotal)}</strong></td><td class="num"><strong>${esc(weighted)}</strong></td></tr></table></div>
         <div class="wizard-summary">배당·분배금 재투자: <strong>${el('dividendReinvest')?.checked?'ON':'OFF'}</strong> · ETF 운용보수 반영: <strong>${el('feeApply')?.checked?'ON':'OFF'}</strong></div>
       </div>
 
       <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🪙 7. 은퇴 후 배당형 운용 설정</div><div class="wizard-report-section-sub">은퇴 시 금융자산의 일부를 배당형 상품으로 전환하는 현재 설정입니다.</div>
-        <table class="wizard-report-table"><tr><td>배당형 운용</td><td class="num">${dividendMode?'사용':'사용하지 않음'}</td></tr><tr><td>배당형 전환 비율</td><td class="num">${dividendAlloc}%</td></tr><tr><td>배당률</td><td class="num">${dividendYield.toFixed(1)}%</td></tr><tr><td>설정 요약</td><td class="num">${esc(dividendModeText)}</td></tr><tr><td>배당 세율 가정</td><td class="num">${esc(valueOf('dividendTaxRate'))}%</td></tr></table>
+        <div class="overflow-x-auto"><table class="wizard-report-table"><tr><td>배당형 운용</td><td class="num">${dividendMode?'사용':'사용하지 않음'}</td></tr><tr><td>배당형 전환 비율</td><td class="num">${dividendAlloc}%</td></tr><tr><td>배당률</td><td class="num">${dividendYield.toFixed(1)}%</td></tr><tr><td>설정 요약</td><td class="num">${esc(dividendModeText)}</td></tr><tr><td>배당 세율 가정</td><td class="num">${esc(valueOf('dividendTaxRate'))}%</td></tr></table></div>
       </div>
 
-      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏛️ 8. 공적연금 상세 설정</div><div class="wizard-report-section-sub">현재 선택한 연금 종류와 관련 입력값입니다.</div><table class="wizard-report-table"><tr><td>연금 종류</td><td class="num">${esc(pension)}</td></tr>${pensionRows}</table></div>
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🏛️ 8. 공적연금 상세 설정</div><div class="wizard-report-section-sub">현재 선택한 연금 종류와 관련 입력값입니다.</div><div class="overflow-x-auto"><table class="wizard-report-table"><tr><td>연금 종류</td><td class="num">${esc(pension)}</td></tr>${pensionRows}</table></div></div>
 
-      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🧾 9. 은퇴소득 세후 계산 가정</div><div class="wizard-report-section-sub">세금은 실제 신고·공제·소득구성에 따라 달라지므로 시뮬레이션용 가정입니다.</div><table class="wizard-report-table"><tr><td>공적연금 세율</td><td class="num">${esc(valueOf('pensionTaxRate'))}%</td></tr><tr><td>배당 세율</td><td class="num">${esc(valueOf('dividendTaxRate'))}%</td></tr><tr><td>부동산 소득 세율</td><td class="num">${esc(valueOf('realEstateTaxRate'))}%</td></tr></table></div>
+      <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🧾 9. 은퇴소득 세후 계산 가정</div><div class="wizard-report-section-sub">세금은 실제 신고·공제·소득구성에 따라 달라지므로 시뮬레이션용 가정입니다.</div><div class="overflow-x-auto"><table class="wizard-report-table"><tr><td>공적연금 세율</td><td class="num">${esc(valueOf('pensionTaxRate'))}%</td></tr><tr><td>배당 세율</td><td class="num">${esc(valueOf('dividendTaxRate'))}%</td></tr><tr><td>부동산 소득 세율</td><td class="num">${esc(valueOf('realEstateTaxRate'))}%</td></tr></table></div></div>
 
       <div class="wizard-report-section wizard-report-break"><div class="wizard-report-section-title">🧭 10. 종합 진단</div><div class="wizard-report-section-sub">v18에서 제공하던 통합 진단 영역을 상세보고서에 포함했습니다.</div><div class="text-xs text-slate-600 leading-relaxed mt-3">${recommendation}</div></div>
 
