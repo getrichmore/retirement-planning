@@ -173,6 +173,46 @@
     .wizard-report-pill { display:inline-flex;align-items:center;padding:5px 9px;border-radius:999px;background:#f1f5f9;color:#475569;font-size:10px;font-weight:800; }
     .wizard-report-actions { display:flex;gap:10px;margin-top:16px; }
     .wizard-report-actions .wizard-btn { flex:1; }
+    /* ===== 상세보고서 진입 전 애드핏 광고 게이트 ===== */
+    .wizard-ad-gate {
+        position:fixed; inset:0; z-index:2000; display:none;
+        align-items:center; justify-content:center;
+        padding:16px; box-sizing:border-box;
+        background:rgba(15,23,42,.72); backdrop-filter:blur(3px);
+    }
+    .wizard-ad-gate.show { display:flex; }
+    .wizard-ad-gate-card {
+        width:min(360px,100%); max-height:calc(100dvh - 32px); overflow:auto;
+        background:#fff; border-radius:22px; box-shadow:0 24px 70px rgba(0,0,0,.28);
+        padding:14px; box-sizing:border-box;
+    }
+    .wizard-ad-gate-head {
+        display:flex; align-items:center; justify-content:space-between; gap:10px;
+        padding:2px 2px 10px;
+    }
+    .wizard-ad-gate-title { font-size:14px; font-weight:900; color:#0f172a; }
+    .wizard-ad-gate-sub { margin-top:3px; font-size:10px; color:#94a3b8; line-height:1.4; }
+    .wizard-ad-gate-close {
+        border:0; background:#f1f5f9; color:#475569; width:32px; height:32px;
+        border-radius:10px; font-size:18px; font-weight:800; cursor:pointer;
+    }
+    .wizard-ad-gate-ad {
+        min-height:480px; display:flex; align-items:center; justify-content:center;
+        background:#f8fafc; border:1px solid #e2e8f0; border-radius:16px; overflow:hidden;
+    }
+    .wizard-ad-gate-actions { padding-top:10px; }
+    .wizard-ad-gate-button {
+        width:100%; min-height:48px; border:0; border-radius:13px; font-weight:900;
+        background:#2563eb; color:#fff; cursor:pointer;
+    }
+    .wizard-ad-gate-button:disabled { opacity:.45; cursor:not-allowed; }
+    .wizard-ad-gate-note { margin-top:7px; text-align:center; font-size:10px; color:#94a3b8; line-height:1.45; }
+    @media(max-width:640px){
+        .wizard-ad-gate { padding:8px; }
+        .wizard-ad-gate-card { width:min(350px,100%); border-radius:18px; padding:10px; }
+        .wizard-ad-gate-ad { min-height:480px; }
+    }
+
     /* 애드핏 광고: 크기가 작아 화면 하단에 항상 고정(sticky)해도 콘텐츠를 크게 가리지 않음 */
     .wizard-ad-slot {
         position:fixed;
@@ -579,7 +619,7 @@
         <div id="wizardReportSummary" class="mt-5"></div>
         <button class="wizard-btn next mt-5 w-full" id="wizardShareBtn" onclick="return window.wizardTriggerKakaoShare();">친구에게 이 프로그램 추천하기</button>
         <p id="wizardShareHint" class="wizard-small text-center mt-2" style="color:#94a3b8;">공유를 마치면 아래 버튼이 활성화됩니다.</p>
-        <button class="wizard-btn next mt-2 w-full" id="wizardOpenFullReportBtn" onclick="return window.wizardOpenFullReport();" disabled style="opacity:.45;cursor:not-allowed;">🔒 상세보고서 보기</button>
+        <button class="wizard-btn next mt-2 w-full" id="wizardOpenFullReportBtn" onclick="return window.wizardRequestFullReport();" disabled style="opacity:.45;cursor:not-allowed;">🔒 상세보고서 보기</button>
       </div>
     </div>
   </div>
@@ -591,6 +631,30 @@
        data-ad-unit="DAN-UffIU05OUlVlZh3d"
        data-ad-width="320"
        data-ad-height="50"></ins>
+</div>
+<script type="text/javascript" src="//t1.kakaocdn.net/kas/static/ba.min.js" async></script>
+
+<!-- 상세보고서 진입 전 320×480 애드핏 광고 -->
+<div id="wizardAdGate" class="wizard-ad-gate no-print" aria-hidden="true">
+  <div class="wizard-ad-gate-card" role="dialog" aria-modal="true" aria-labelledby="wizardAdGateTitle">
+    <div class="wizard-ad-gate-head">
+      <div>
+        <div id="wizardAdGateTitle" class="wizard-ad-gate-title">상세보고서를 확인하기 전에 광고를 잠시 봐주세요</div>
+        <div class="wizard-ad-gate-sub">광고가 표시된 후 잠시 기다리면 상세보고서를 열 수 있습니다.</div>
+      </div>
+      <button type="button" class="wizard-ad-gate-close" aria-label="닫기" onclick="window.wizardCloseAdGate()">×</button>
+    </div>
+    <div class="wizard-ad-gate-ad">
+      <ins class="kakao_ad_area" style="display:none;"
+           data-ad-unit="DAN-NqY2lG2fKI50QVHK"
+           data-ad-width="320"
+           data-ad-height="480"></ins>
+    </div>
+    <div class="wizard-ad-gate-actions">
+      <button type="button" id="wizardAdGateContinue" class="wizard-ad-gate-button" disabled onclick="window.wizardContinueToFullReport()">광고 확인 후 상세보고서 보기 (5초)</button>
+      <div class="wizard-ad-gate-note">광고가 표시되지 않는 경우에도 잠시 후 상세보고서를 계속할 수 있습니다.</div>
+    </div>
+  </div>
 </div>
 <script type="text/javascript" src="//t1.kakaocdn.net/kas/static/ba.min.js" async></script>
 
@@ -2926,11 +2990,11 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
       return true;
     }finally{ detailedReportOpening=false; }
   };
-  window.__openRetirementDetailedReport=function(){ return window.wizardOpenFullReport(); };
+  window.__openRetirementDetailedReport=function(){ return window.wizardRequestFullReport(); };
 
   // "친구에게 이 프로그램 추천하기" 버튼 동작:
-  // 카카오톡 SDK 대신 브라우저/휴대폰 기본 공유 기능(Web Share API)을 사용해 링크를 공유합니다.
-  // Web Share API를 지원하지 않는 환경(주로 데스크톱 브라우저)에서는 링크를 클립보드에 복사합니다.
+  // 카카오톡 공유 SDK를 우선 사용하고, 사용할 수 없으면 브라우저 기본 공유 기능으로 대체합니다.
+  // 모든 경우 절대 HTTPS URL을 공유하여 카카오톡에서 눌렀을 때 실제 웹페이지로 이동하도록 합니다.
   // 공유창을 열고 이 페이지로 돌아오면(탭/앱 전환 복귀) '상세보고서 보기' 버튼의 잠금을 해제하고,
   // 감지가 어려운 환경을 위한 안전장치로 일정 시간 후 자동 해제도 함께 둡니다.
   let wizardShareTriggered=false;
@@ -2939,7 +3003,9 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     wizardShareTriggered=true;
     const shareBtn=el('wizardShareBtn');
     if(shareBtn){ shareBtn.textContent='공유창을 확인해주세요 →'; }
-    const SHARE_URL='https://getrichmore.github.io/retirement-planning/';
+    // GitHub Pages에서 카카오 인앱 브라우저가 리디렉션/상대경로 해석으로 막히는 상황을 줄이기 위해
+    // 공유 URL을 index.html까지 포함한 절대 HTTPS 주소로 고정합니다.
+    const SHARE_URL='https://getrichmore.github.io/retirement-planning/index.html';
     const SHARE_IMAGE='https://getrichmore.github.io/retirement-planning/main.png';
     const SHARE_TITLE='노후 자산 시뮬레이션';
     const SHARE_DESC='몇 가지 질문에 답하기만 하면, 내 노후 자산이 얼마나 준비되어 있는지 바로 확인할 수 있어요.';
@@ -2954,9 +3020,15 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
             title:SHARE_TITLE,
             description:SHARE_DESC,
             imageUrl:SHARE_IMAGE,
-            link:{ mobileWebUrl:SHARE_URL, webUrl:SHARE_URL }
+            link:{
+              mobileWebUrl:SHARE_URL,
+              webUrl:SHARE_URL
+            }
           },
-          buttons:[{ title:'웹으로 보기', link:{ mobileWebUrl:SHARE_URL, webUrl:SHARE_URL } }]
+          buttons:[{
+            title:'노후 자산 시뮬레이션 열기',
+            link:{ mobileWebUrl:SHARE_URL, webUrl:SHARE_URL }
+          }]
         });
         wizardUnlockReportBtn();
         return false;
@@ -2995,6 +3067,72 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     const hint=el('wizardShareHint');
     if(hint){ hint.textContent='공유해주셔서 감사합니다! 이제 상세보고서를 확인해보세요 🙌'; hint.style.color='#16a34a'; hint.style.fontWeight='800'; }
   }
+  // ===== 상세보고서 진입 전 애드핏 광고 게이트 =====
+  let wizardAdGateTimer=null;
+  let wizardAdGateSeconds=5;
+  let wizardReportPending=false;
+  let wizardAdGateOpened=false;
+
+  window.wizardRequestFullReport=function(){
+    if(detailedReportOpening) return false;
+    if(wizardAdGateOpened) return false;
+    wizardReportPending=true;
+    const gate=el('wizardAdGate');
+    const btn=el('wizardAdGateContinue');
+    if(!gate || !btn){
+      return window.wizardOpenFullReport();
+    }
+    wizardAdGateOpened=true;
+    wizardAdGateSeconds=5;
+    btn.disabled=true;
+    btn.textContent=`광고 확인 후 상세보고서 보기 (${wizardAdGateSeconds}초)`;
+    gate.classList.add('show');
+    gate.setAttribute('aria-hidden','false');
+    document.body.style.overflow='hidden';
+
+    // 동적으로 삽입된 광고도 다시 KAS가 처리하도록 소스를 재요청합니다.
+    try{
+      const ad=gate.querySelector('.kakao_ad_area');
+      if(ad){ ad.style.display='block'; }
+    }catch(e){}
+
+    if(wizardAdGateTimer) clearInterval(wizardAdGateTimer);
+    wizardAdGateTimer=setInterval(()=>{
+      wizardAdGateSeconds--;
+      if(wizardAdGateSeconds<=0){
+        clearInterval(wizardAdGateTimer); wizardAdGateTimer=null;
+        btn.disabled=false;
+        btn.textContent='✅ 광고 확인 완료 · 상세보고서 보기';
+      }else{
+        btn.textContent=`광고 확인 후 상세보고서 보기 (${wizardAdGateSeconds}초)`;
+      }
+    },1000);
+    return false;
+  };
+
+  window.wizardContinueToFullReport=function(){
+    if(wizardAdGateSeconds>0) return false;
+    const gate=el('wizardAdGate');
+    if(gate){ gate.classList.remove('show'); gate.setAttribute('aria-hidden','true'); }
+    document.body.style.overflow='';
+    wizardAdGateOpened=false;
+    if(wizardAdGateTimer){ clearInterval(wizardAdGateTimer); wizardAdGateTimer=null; }
+    if(wizardReportPending){
+      wizardReportPending=false;
+      return window.wizardOpenFullReport();
+    }
+    return false;
+  };
+
+  window.wizardCloseAdGate=function(){
+    if(wizardAdGateTimer){ clearInterval(wizardAdGateTimer); wizardAdGateTimer=null; }
+    const gate=el('wizardAdGate');
+    if(gate){ gate.classList.remove('show'); gate.setAttribute('aria-hidden','true'); }
+    document.body.style.overflow='';
+    wizardAdGateOpened=false;
+    wizardReportPending=false;
+  };
+
   window.wizardBackToEdit=function(){
     document.body.classList.add('wizard-active');
     el('wizardReportCard').classList.add('hidden');el('wizardCard').classList.remove('hidden');
