@@ -3004,15 +3004,16 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
     const shareBtn=el('wizardShareBtn');
     if(shareBtn){ shareBtn.textContent='공유창을 확인해주세요 →'; }
     // GitHub Pages에서 카카오 인앱 브라우저가 리디렉션/상대경로 해석으로 막히는 상황을 줄이기 위해
-    // 공유 URL을 index.html까지 포함한 절대 HTTPS 주소로 고정합니다.
-    const SHARE_URL='https://getrichmore.github.io/retirement-planning/index.html';
+    // 공유 URL을 GitHub Pages의 실제 대표 주소(끝 슬래시 포함)로 고정합니다.
+    const SHARE_URL='https://getrichmore.github.io/retirement-planning/';
     const SHARE_IMAGE='https://getrichmore.github.io/retirement-planning/main.png';
+    const SHARE_CANONICAL_URL='https://getrichmore.github.io/retirement-planning/';
     const SHARE_TITLE='노후 자산 시뮬레이션';
     const SHARE_DESC='몇 가지 질문에 답하기만 하면, 내 노후 자산이 얼마나 준비되어 있는지 바로 확인할 수 있어요.';
     const SHARE_TEXT=`${SHARE_TITLE}\n${SHARE_DESC}`;
 
     // 1순위: 카카오톡 공유 SDK — 카톡 인앱 브라우저를 포함해 가장 안정적으로 동작합니다.
-    if(window.Kakao && window.Kakao.isInitialized && window.Kakao.isInitialized() && window.Kakao.Share){
+    if(window.Kakao && typeof window.Kakao.isInitialized==='function' && window.Kakao.isInitialized() && window.Kakao.Share && typeof window.Kakao.Share.sendDefault==='function'){
       try{
         window.Kakao.Share.sendDefault({
           objectType:'feed',
@@ -3037,11 +3038,11 @@ const RE_SEOUL_CAGR={seoul:4.8,gangnam:6.8,seocho:6.8,songpa:6.8,yongsan:6.2,seo
 
     // 2순위: 브라우저 기본 공유 시트(Web Share API) → 3순위: 클립보드 복사
     if(navigator.share){
-      navigator.share({ title:SHARE_TITLE, text:SHARE_TEXT, url:SHARE_URL })
+      navigator.share({ title:SHARE_TITLE, text:SHARE_TEXT, url:SHARE_CANONICAL_URL })
         .then(()=>{ wizardUnlockReportBtn(); })
         .catch(e=>{ console.warn('공유 취소 또는 실패:', e); });
     }else if(navigator.clipboard && navigator.clipboard.writeText){
-      navigator.clipboard.writeText(SHARE_URL).then(()=>{
+      navigator.clipboard.writeText(SHARE_CANONICAL_URL).then(()=>{
         const hint=el('wizardShareHint');
         if(hint){ hint.textContent='링크가 복사되었습니다. 친구에게 붙여넣어 보내주세요! 📋'; hint.style.color='#2563eb'; hint.style.fontWeight='800'; }
       }).catch(e=>{ console.warn('클립보드 복사 실패:', e); });
